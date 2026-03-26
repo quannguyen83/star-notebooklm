@@ -27,16 +27,241 @@ interface NotebookInfo {
 type SourceAddMethod = 'dom' | 'api';
 
 interface StarNotebookLMSettings {
+	language: 'auto' | 'ko' | 'en';
 	includeMetadata: boolean;
 	includeFrontmatter: boolean;
 	sourceAddMethod: SourceAddMethod; // 'dom' = DOM 조작, 'api' = API 직접 호출
 }
 
 const DEFAULT_SETTINGS: StarNotebookLMSettings = {
+	language: 'auto',
 	includeMetadata: true,
 	includeFrontmatter: false,
 	sourceAddMethod: 'api' // 기본값: API 방식
 };
+
+type LangKey = 'ko' | 'en';
+
+// Obsidian locale 감지
+function detectLanguage(): LangKey {
+	// moment.locale()은 Obsidian이 설정한 언어를 반환
+	const locale = (window as any).moment?.locale?.() || navigator.language || 'en';
+	return locale.startsWith('ko') ? 'ko' : 'en';
+}
+
+function getLanguage(setting: 'auto' | 'ko' | 'en'): LangKey {
+	if (setting === 'auto') return detectLanguage();
+	return setting;
+}
+
+const i18n: Record<LangKey, Record<string, string>> = {
+	ko: {
+		// ribbons & commands
+		'ribbon.send': 'NotebookLM에 전송',
+		'ribbon.open': 'NotebookLM 열기',
+		'cmd.sendNote': '현재 노트를 NotebookLM에 전송',
+		'cmd.sendSelection': '선택된 텍스트를 NotebookLM에 전송',
+		'cmd.open': 'NotebookLM 열기',
+		// context menus
+		'menu.send': 'NotebookLM에 전송',
+		'menu.sendMulti': 'NotebookLM에 전송 ({count}개)',
+		'menu.sendSelection': '선택 영역을 NotebookLM에 전송',
+		// status bar
+		'status.queue': '📋 Star: {count}',
+		'status.queueTooltip': 'Star NotebookLM\n대기열: {count}개',
+		'status.ready': '📘 Star NLM',
+		'status.readyTooltip': 'Star NotebookLM 준비됨',
+		// notices
+		'notice.selectText': '텍스트를 선택해주세요',
+		'notice.noActiveNote': '활성 노트가 없습니다',
+		'notice.fetchingNotebooks': '노트북 목록을 가져오는 중...',
+		'notice.movingToNotebook': '"{title}" 노트북으로 이동 중...',
+		'notice.createNewManual': 'NotebookLM에서 새 노트북을 만들어주세요.\n노트가 대기열에 추가되었습니다.',
+		'notice.preparingNotes': '{count}개 노트 준비 중...',
+		'notice.sendingNotes': '"{title}" 노트북으로 {count}개 노트 전송 중...',
+		'notice.creatingNotebook': '새 노트북 생성 중...',
+		'notice.creatingNotebookAPI': '새 노트북 생성 중 (API)...',
+		'notice.notebookCreated': '✅ 노트북 "{title}" 생성 완료!',
+		'notice.waitingNotebook': '새 노트북이 생성되면 소스가 자동 추가됩니다.\n잠시 기다려주세요...',
+		'notice.notebookCreateFailed': '새 노트북 생성에 실패했습니다. 수동으로 생성해주세요.',
+		'notice.addingTextSource': '"{title}" 텍스트 소스 API로 추가 중...',
+		'notice.selectNotebookFirst': '노트북을 먼저 선택해주세요.',
+		'notice.noAuthToken': '인증 토큰을 찾을 수 없습니다. DOM 방식으로 전환...',
+		'notice.textSourceAdded': '✅ "{title}" 텍스트 소스 추가 완료!',
+		'notice.apiFailed': 'API 실패. DOM 방식으로 재시도...',
+		'notice.addingUrlSource': '"{title}" URL 소스 API로 추가 중...',
+		'notice.urlSourceAdded': '✅ "{title}" URL 소스 추가 완료!',
+		'notice.addingDomSource': '"{title}" DOM 방식으로 소스 추가 중...',
+		'notice.sourceAdded': '✅ "{title}" 소스가 추가되었습니다!',
+		'notice.manualInsert': '📝 텍스트 입력 완료!\n"삽입" 버튼을 클릭해주세요.',
+		'notice.clipboardFallback': '📋 자동 입력 실패. 클립보드에 복사됨.\n\nCmd+V로 붙여넣기 후 삽입 클릭',
+		'notice.clipboardCopied': '📋 "{title}" 클립보드에 복사됨.\n\n수동으로 붙여넣기 해주세요.',
+		'notice.sourceAddFailed': '소스 추가에 실패했습니다.',
+		'notice.linkSourceAdded': '✅ "{title}" 링크 소스가 추가되었습니다!\n({link})',
+		'notice.manualUrlInsert': '📝 URL 입력 완료!\n"삽입" 버튼을 클릭해주세요.',
+		'notice.urlClipboardFallback': '📋 자동 입력 실패. URL이 클립보드에 복사됨.\n\n{link}',
+		'notice.urlClipboardCopied': '📋 "{title}" URL이 클립보드에 복사됨.\n\n수동으로 붙여넣기 해주세요.',
+		'notice.linkAddFailed': '링크 소스 추가에 실패했습니다.',
+		'notice.webviewNotOpen': 'NotebookLM 웹뷰가 열려있지 않습니다.\n먼저 NotebookLM을 열어주세요.',
+		'notice.collectingDom': 'DOM 정보 수집 중...',
+		'notice.domSaved': 'DOM 정보가 {path}에 저장되었습니다.\n\n버튼 {buttons}개\n노트북 링크 {links}개\n입력필드 {inputs}개\n다이얼로그 {dialogs}개',
+		'notice.domFailed': 'DOM 정보 수집 실패: {error}',
+		'notice.emptyQueue': '대기열이 비어있습니다',
+		'notice.selectNotebook': '먼저 노트북을 선택해주세요',
+		'notice.addingFromQueue': '"{title}" 추가 중...',
+		'notice.addedFromQueue': '"{title}" 추가 완료!',
+		'notice.batchProgress': '추가 중... ({current}/{total}) - {title}',
+		'notice.batchAllSuccess': '✅ {count}개 노트 모두 추가 완료!',
+		'notice.batchPartial': '완료! 성공: {success}개, 실패: {failed}개',
+		'notice.refreshFailed': '노트북 목록 가져오기 실패. NotebookLM 웹뷰가 로드되었는지 확인해주세요.',
+		// modal
+		'modal.selectNotebook': '노트북 선택',
+		'modal.loading': '로딩 중...',
+		'modal.refresh': '새로고침',
+		'modal.whereToAdd': '"{title}" 노트를 어디에 추가할까요?',
+		'modal.newNotebook': '새 노트북',
+		'modal.createNew': '새 노트북 만들기',
+		'modal.createNewDesc': 'NotebookLM에서 새 노트북을 생성합니다',
+		'modal.existingNotebooks': '기존 노트북 ({count}개)',
+		'modal.noNotebooks': '기존 노트북을 찾을 수 없습니다.',
+		'modal.noNotebooksHint': 'NotebookLM 웹뷰가 완전히 로드된 후 위의 <strong>새로고침</strong> 버튼을 눌러주세요.',
+		'modal.cancel': '취소',
+		// settings
+		'settings.title': 'Star NotebookLM 설정',
+		'settings.language': '언어',
+		'settings.languageDesc': '플러그인 UI 언어',
+		'settings.langAuto': '자동 감지',
+		'settings.langKo': '한국어',
+		'settings.langEn': 'English',
+		'settings.includeMetadata': '메타데이터 포함',
+		'settings.includeMetadataDesc': '노트 전송 시 생성/수정 시간, 태그 등 메타데이터 포함',
+		'settings.includeFrontmatter': 'Frontmatter 포함',
+		'settings.includeFrontmatterDesc': '노트 전송 시 YAML frontmatter 포함',
+		'settings.sourceMethod': '소스 추가 방식',
+		'settings.sourceMethodDesc': 'NotebookLM에 소스를 추가하는 방식을 선택합니다',
+		'settings.sourceApi': 'API 직접 호출 (빠름, 권장)',
+		'settings.sourceDom': 'DOM 조작 (안정적)',
+		'settings.usage': '사용법',
+		'settings.usage1': '1. 왼쪽 리본의 책 아이콘(book-open)을 클릭하여 NotebookLM 패널을 엽니다.',
+		'settings.usage2': '2. NotebookLM 패널에서 Google 계정으로 로그인합니다.',
+		'settings.usage3': '3. 노트를 전송하는 방법:',
+		'settings.usageMethod1': '리본의 전송 아이콘(send) 클릭',
+		'settings.usageMethod2': '파일 탐색기에서 노트 우클릭 → "NotebookLM에 전송"',
+		'settings.usageMethod3': '에디터에서 우클릭 → "NotebookLM에 전송" (전체 노트)',
+		'settings.usageMethod4': '텍스트 선택 후 우클릭 → "선택 영역을 NotebookLM에 전송"',
+		'settings.usage4': '4. 노트북 선택 모달에서 기존 노트북을 선택하거나 새로 만듭니다.',
+		// view
+		'view.displayText': 'NotebookLM',
+		'view.refresh': '🔄 새로고침',
+		'view.notebookList': '📚 노트북 목록',
+	},
+	en: {
+		'ribbon.send': 'Send to NotebookLM',
+		'ribbon.open': 'Open NotebookLM',
+		'cmd.sendNote': 'Send current note to NotebookLM',
+		'cmd.sendSelection': 'Send selected text to NotebookLM',
+		'cmd.open': 'Open NotebookLM',
+		'menu.send': 'Send to NotebookLM',
+		'menu.sendMulti': 'Send to NotebookLM ({count})',
+		'menu.sendSelection': 'Send selection to NotebookLM',
+		'status.queue': '📋 Star: {count}',
+		'status.queueTooltip': 'Star NotebookLM\nQueue: {count}',
+		'status.ready': '📘 Star NLM',
+		'status.readyTooltip': 'Star NotebookLM Ready',
+		'notice.selectText': 'Please select some text',
+		'notice.noActiveNote': 'No active note',
+		'notice.fetchingNotebooks': 'Fetching notebook list...',
+		'notice.movingToNotebook': 'Moving to "{title}" notebook...',
+		'notice.createNewManual': 'Please create a new notebook in NotebookLM.\nNote has been added to the queue.',
+		'notice.preparingNotes': 'Preparing {count} notes...',
+		'notice.sendingNotes': 'Sending {count} notes to "{title}" notebook...',
+		'notice.creatingNotebook': 'Creating new notebook...',
+		'notice.creatingNotebookAPI': 'Creating new notebook (API)...',
+		'notice.notebookCreated': '✅ Notebook "{title}" created!',
+		'notice.waitingNotebook': 'Source will be added automatically when notebook is ready.\nPlease wait...',
+		'notice.notebookCreateFailed': 'Failed to create notebook. Please create one manually.',
+		'notice.addingTextSource': 'Adding "{title}" as text source via API...',
+		'notice.selectNotebookFirst': 'Please select a notebook first.',
+		'notice.noAuthToken': 'Auth token not found. Switching to DOM method...',
+		'notice.textSourceAdded': '✅ "{title}" text source added!',
+		'notice.apiFailed': 'API failed. Retrying with DOM method...',
+		'notice.addingUrlSource': 'Adding "{title}" as URL source via API...',
+		'notice.urlSourceAdded': '✅ "{title}" URL source added!',
+		'notice.addingDomSource': 'Adding "{title}" via DOM method...',
+		'notice.sourceAdded': '✅ "{title}" source added!',
+		'notice.manualInsert': '📝 Text input complete!\nPlease click the "Insert" button.',
+		'notice.clipboardFallback': '📋 Auto-input failed. Copied to clipboard.\n\nUse Cmd+V to paste, then click Insert',
+		'notice.clipboardCopied': '📋 "{title}" copied to clipboard.\n\nPlease paste manually.',
+		'notice.sourceAddFailed': 'Failed to add source.',
+		'notice.linkSourceAdded': '✅ "{title}" link source added!\n({link})',
+		'notice.manualUrlInsert': '📝 URL input complete!\nPlease click the "Insert" button.',
+		'notice.urlClipboardFallback': '📋 Auto-input failed. URL copied to clipboard.\n\n{link}',
+		'notice.urlClipboardCopied': '📋 "{title}" URL copied to clipboard.\n\nPlease paste manually.',
+		'notice.linkAddFailed': 'Failed to add link source.',
+		'notice.webviewNotOpen': 'NotebookLM webview is not open.\nPlease open NotebookLM first.',
+		'notice.collectingDom': 'Collecting DOM info...',
+		'notice.domSaved': 'DOM info saved to {path}.\n\nButtons: {buttons}\nNotebook links: {links}\nInputs: {inputs}\nDialogs: {dialogs}',
+		'notice.domFailed': 'DOM collection failed: {error}',
+		'notice.emptyQueue': 'Queue is empty',
+		'notice.selectNotebook': 'Please select a notebook first',
+		'notice.addingFromQueue': 'Adding "{title}"...',
+		'notice.addedFromQueue': '"{title}" added!',
+		'notice.batchProgress': 'Adding... ({current}/{total}) - {title}',
+		'notice.batchAllSuccess': '✅ All {count} notes added!',
+		'notice.batchPartial': 'Done! Success: {success}, Failed: {failed}',
+		'notice.refreshFailed': 'Failed to fetch notebooks. Make sure NotebookLM webview is loaded.',
+		'modal.selectNotebook': 'Select Notebook',
+		'modal.loading': 'Loading...',
+		'modal.refresh': 'Refresh',
+		'modal.whereToAdd': 'Where to add "{title}"?',
+		'modal.newNotebook': 'New Notebook',
+		'modal.createNew': 'Create New Notebook',
+		'modal.createNewDesc': 'Create a new notebook in NotebookLM',
+		'modal.existingNotebooks': 'Existing Notebooks ({count})',
+		'modal.noNotebooks': 'No existing notebooks found.',
+		'modal.noNotebooksHint': 'Please wait for NotebookLM webview to fully load, then click <strong>Refresh</strong> above.',
+		'modal.cancel': 'Cancel',
+		'settings.title': 'Star NotebookLM Settings',
+		'settings.language': 'Language',
+		'settings.languageDesc': 'Plugin UI language',
+		'settings.langAuto': 'Auto Detect',
+		'settings.langKo': '한국어',
+		'settings.langEn': 'English',
+		'settings.includeMetadata': 'Include Metadata',
+		'settings.includeMetadataDesc': 'Include creation/modification time, tags when sending notes',
+		'settings.includeFrontmatter': 'Include Frontmatter',
+		'settings.includeFrontmatterDesc': 'Include YAML frontmatter when sending notes',
+		'settings.sourceMethod': 'Source Add Method',
+		'settings.sourceMethodDesc': 'Method to add sources to NotebookLM',
+		'settings.sourceApi': 'API Direct Call (fast, recommended)',
+		'settings.sourceDom': 'DOM Manipulation (stable)',
+		'settings.usage': 'Usage',
+		'settings.usage1': '1. Click the book icon (book-open) in the left ribbon to open NotebookLM panel.',
+		'settings.usage2': '2. Log in with your Google account in the NotebookLM panel.',
+		'settings.usage3': '3. Ways to send notes:',
+		'settings.usageMethod1': 'Click the send icon in the ribbon',
+		'settings.usageMethod2': 'Right-click a note in file explorer → "Send to NotebookLM"',
+		'settings.usageMethod3': 'Right-click in editor → "Send to NotebookLM" (full note)',
+		'settings.usageMethod4': 'Select text, right-click → "Send selection to NotebookLM"',
+		'settings.usage4': '4. In the notebook selection modal, choose an existing notebook or create new.',
+		'view.displayText': 'NotebookLM',
+		'view.refresh': '🔄 Refresh',
+		'view.notebookList': '📚 Notebooks',
+	}
+};
+
+// 현재 언어 설정 (플러그인 로드 시 설정됨)
+let currentLang: LangKey = 'ko';
+
+function t(key: string, params?: Record<string, string | number>): string {
+	let text = i18n[currentLang]?.[key] || i18n['en']?.[key] || key;
+	if (params) {
+		for (const [k, v] of Object.entries(params)) {
+			text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+		}
+	}
+	return text;
+}
 
 interface NoteData {
 	title: string;
@@ -65,6 +290,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		currentLang = getLanguage(this.settings.language);
 
 		// NotebookLM 웹뷰 등록
 		this.registerView(
@@ -77,19 +303,19 @@ export default class StarNotebookLMPlugin extends Plugin {
 		this.updateStatusBar();
 
 		// 리본 아이콘 추가 - 전송
-		this.addRibbonIcon('send', 'NotebookLM에 전송', async () => {
+		this.addRibbonIcon('send', t('ribbon.send'), async () => {
 			await this.sendCurrentNoteToQueue();
 		});
 
 		// 리본 아이콘 추가 - NotebookLM 열기
-		this.addRibbonIcon('book-open', 'NotebookLM 열기', async () => {
+		this.addRibbonIcon('book-open', t('ribbon.open'), async () => {
 			await this.openNotebookLMView();
 		});
 
 		// 명령어 추가
 		this.addCommand({
 			id: 'send-to-notebooklm',
-			name: '현재 노트를 NotebookLM에 전송',
+			name: t('cmd.sendNote'),
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				await this.sendCurrentNoteToQueue();
 			}
@@ -97,13 +323,13 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'send-selection-to-notebooklm',
-			name: '선택된 텍스트를 NotebookLM에 전송',
+			name: t('cmd.sendSelection'),
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const selection = editor.getSelection();
 				if (selection) {
 					await this.sendTextToQueue(selection, view.file?.basename || 'Selection');
 				} else {
-					new Notice('텍스트를 선택해주세요');
+					new Notice(t('notice.selectText'));
 				}
 			}
 		});
@@ -111,7 +337,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'open-notebooklm',
-			name: 'NotebookLM 열기',
+			name: t('cmd.open'),
 			callback: async () => {
 				await this.openNotebookLMView();
 			}
@@ -123,7 +349,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 				if (file instanceof TFile && file.extension === 'md') {
 					menu.addItem((item) => {
 						item
-							.setTitle('NotebookLM에 전송')
+							.setTitle(t('menu.send'))
 							.setIcon('send')
 							.onClick(async () => {
 								await this.sendFileToQueue(file);
@@ -141,7 +367,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 				if (mdFiles.length > 1) {  // 2개 이상일 때만 표시
 					menu.addItem((item) => {
 						item
-							.setTitle(`NotebookLM에 전송 (${mdFiles.length}개)`)
+							.setTitle(t('menu.sendMulti', { count: mdFiles.length }))
 							.setIcon('send')
 							.onClick(async () => {
 								await this.sendFilesToQueue(mdFiles);
@@ -157,7 +383,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 				// 현재 노트 전송 (항상 표시)
 				menu.addItem((item) => {
 					item
-						.setTitle('NotebookLM에 전송')
+						.setTitle(t('menu.send'))
 						.setIcon('send')
 						.onClick(async () => {
 							await this.sendCurrentNoteToQueue();
@@ -169,7 +395,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 				if (selection) {
 					menu.addItem((item) => {
 						item
-							.setTitle('선택 영역을 NotebookLM에 전송')
+							.setTitle(t('menu.sendSelection'))
 							.setIcon('text-select')
 							.onClick(async () => {
 								await this.sendTextToQueue(selection, view.file?.basename || 'Selection');
@@ -198,11 +424,11 @@ export default class StarNotebookLMPlugin extends Plugin {
 	updateStatusBar() {
 		const queueSize = this.noteQueue.size;
 		if (queueSize > 0) {
-			this.statusBarItem.setText(`📋 Star: ${queueSize}`);
-			this.statusBarItem.setAttribute('title', `Star NotebookLM\n대기열: ${queueSize}개`);
+			this.statusBarItem.setText(t('status.queue', { count: queueSize }));
+			this.statusBarItem.setAttribute('title', t('status.queueTooltip', { count: queueSize }));
 		} else {
-			this.statusBarItem.setText('📘 Star NLM');
-			this.statusBarItem.setAttribute('title', 'Star NotebookLM 준비됨');
+			this.statusBarItem.setText(t('status.ready'));
+			this.statusBarItem.setAttribute('title', t('status.readyTooltip'));
 		}
 	}
 
@@ -279,7 +505,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 	async sendCurrentNoteToQueue() {
 		const note = await this.getCurrentNote();
 		if (!note) {
-			new Notice('활성 노트가 없습니다');
+			new Notice(t('notice.noActiveNote'));
 			return;
 		}
 
@@ -289,7 +515,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		if (view && view.webview) {
 			// 노트북 목록 페이지로 이동
-			new Notice('노트북 목록을 가져오는 중...');
+			new Notice(t('notice.fetchingNotebooks'));
 			view.webview.loadURL('https://notebooklm.google.com');
 
 			// 페이지 로드 대기 후 노트북 목록 가져오고 모달 표시
@@ -355,7 +581,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 			if (selectedNotebook) {
 				// 기존 노트북 선택
-				new Notice(`"${selectedNotebook.title}" 노트북으로 이동 중...`);
+				new Notice(t('notice.movingToNotebook', { title: selectedNotebook.title }));
 
 				if (nlmView && nlmView.webview) {
 					// 노트북으로 이동
@@ -373,7 +599,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 				}
 			} else {
 				// 새 노트북 만들기
-				new Notice('NotebookLM에서 새 노트북을 만들어주세요.\n노트가 대기열에 추가되었습니다.');
+				new Notice(t('notice.createNewManual'));
 				this.addToQueue(note);
 
 				if (nlmView && nlmView.webview) {
@@ -395,7 +621,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		if (view && view.webview) {
 			// 노트북 목록 페이지로 이동 (노트북 목록을 가져오기 위해)
-			new Notice('노트북 목록을 가져오는 중...');
+			new Notice(t('notice.fetchingNotebooks'));
 			view.webview.loadURL('https://notebooklm.google.com');
 
 			// 페이지 로드 대기 후 노트북 목록 가져오기
@@ -422,7 +648,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 		const view = this.getNotebookLMView();
 
 		if (view && view.webview) {
-			new Notice(`${notes.length}개 노트 준비 중...`);
+			new Notice(t('notice.preparingNotes', { count: notes.length }));
 			view.webview.loadURL('https://notebooklm.google.com');
 
 			setTimeout(async () => {
@@ -440,13 +666,13 @@ export default class StarNotebookLMPlugin extends Plugin {
 			this.app,
 			this,
 			notebooks,
-			`${notes.length}개 노트`,  // 제목에 개수 표시
+			t('notice.preparingNotes', { count: notes.length }),  // 제목에 개수 표시
 			async (selected: any) => {
 				const view = this.getNotebookLMView();
 
 				if (selected) {
 					// 기존 노트북 선택
-					new Notice(`"${selected.title}" 노트북으로 ${notes.length}개 노트 전송 중...`);
+					new Notice(t('notice.sendingNotes', { title: selected.title, count: notes.length }));
 
 					if (view && view.webview) {
 						if (selected.url) {
@@ -523,7 +749,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 					}
 				} else {
 					// 새 노트북 만들기
-					new Notice('새 노트북 생성 중...');
+					new Notice(t('notice.creatingNotebook'));
 
 					if (view && view.webview) {
 						// 새 노트북 만들기 버튼 클릭
@@ -583,7 +809,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		for (let i = 0; i < notes.length; i++) {
 			const note = notes[i];
-			new Notice(`추가 중... (${i + 1}/${total}) - ${note.title}`);
+			new Notice(t('notice.batchProgress', { current: i + 1, total, title: note.title }));
 
 			try {
 				await this.addSourceToNotebook(view, note);
@@ -600,9 +826,9 @@ export default class StarNotebookLMPlugin extends Plugin {
 		}
 
 		if (failed === 0) {
-			new Notice(`✅ ${success}개 노트 모두 추가 완료!`);
+			new Notice(t('notice.batchAllSuccess', { count: success }));
 		} else {
-			new Notice(`완료! 성공: ${success}개, 실패: ${failed}개`);
+			new Notice(t('notice.batchPartial', { success, failed }));
 		}
 	}
 
@@ -613,136 +839,201 @@ export default class StarNotebookLMPlugin extends Plugin {
 			return [];
 		}
 
+		// 먼저 wXbhsf RPC로 노트북 목록 가져오기 시도
 		try {
-			const result = await view.webview.executeJavaScript(`
-				(function() {
-					const notebooks = [];
-					const seen = new Set();
+			const rpcResult = await this.getNotebooksViaRPC(view);
+			if (rpcResult && rpcResult.length > 0) {
+				console.log('[Star NotebookLM] RPC로 노트북 목록 가져옴:', rpcResult.length);
+				return rpcResult;
+			}
+		} catch (error) {
+			console.log('[Star NotebookLM] RPC 노트북 목록 실패, DOM 폴백:', error);
+		}
 
-					// 방법 1: project-table에서 노트북 제목 가져오기 (모바일/좁은 화면)
-					const table = document.querySelector('table.project-table');
-					if (table) {
-						const rows = table.querySelectorAll('tbody tr, tr');
-						rows.forEach((row, index) => {
-							const titleEl = row.querySelector('.project-table-title, [class*="table-title"]');
-							if (titleEl) {
-								const title = titleEl.textContent.trim();
-								if (title && !seen.has(title)) {
-									seen.add(title);
-									notebooks.push({
-										id: 'row-' + index,
-										title: title,
-										url: '',
-										rowIndex: index,
-										viewType: 'table'
-									});
-								}
-							}
-						});
-					}
-
-					// 방법 2: PC 뷰 카드 레이아웃 - project-button 요소 (넓은 화면)
-					if (notebooks.length === 0) {
-						// project-button 요소들 찾기 (PC 카드 뷰의 메인 컨테이너)
-						const projectButtons = document.querySelectorAll('project-button.project-button');
-						projectButtons.forEach((btn, index) => {
-							// span.project-button-title에서 제목 추출
-							const titleEl = btn.querySelector('span.project-button-title, .project-button-title');
-							if (titleEl) {
-								const title = titleEl.textContent.trim();
-								if (title && !seen.has(title) && !title.includes('새 노트') && !title.includes('만들기')) {
-									seen.add(title);
-									notebooks.push({
-										id: 'projectbtn-' + index,
-										title: title,
-										url: '',
-										cardIndex: index,
-										viewType: 'projectButton'
-									});
-								}
-							}
-						});
-					}
-
-					// 방법 3: mat-card.project-button-card 찾기
-					if (notebooks.length === 0) {
-						const matCards = document.querySelectorAll('mat-card.project-button-card');
-						matCards.forEach((card, index) => {
-							const titleEl = card.querySelector('span.project-button-title, .project-button-title');
-							if (titleEl) {
-								const title = titleEl.textContent.trim();
-								if (title && !seen.has(title) && !title.includes('새 노트') && !title.includes('만들기')) {
-									seen.add(title);
-									notebooks.push({
-										id: 'matcard-' + index,
-										title: title,
-										url: '',
-										cardIndex: index,
-										viewType: 'matcard'
-									});
-								}
-							}
-						});
-					}
-
-					// 방법 4: 클릭 가능한 노트북 항목 (href 포함)
-					if (notebooks.length === 0) {
-						document.querySelectorAll('a[href*="/notebook/"]').forEach(el => {
-							const href = el.getAttribute('href') || '';
-							const match = href.match(/\\/notebook\\/([^/\\?]+)/);
-							if (match && !seen.has(match[1])) {
-								seen.add(match[1]);
-								const title = el.textContent.trim() || 'Untitled notebook';
-								// "새 노트 만들기" 제외
-								if (!title.includes('새 노트') && !title.includes('만들기')) {
-									notebooks.push({
-										id: match[1],
-										title: title,
-										url: 'https://notebooklm.google.com' + href,
-										viewType: 'link'
-									});
-								}
-							}
-						});
-					}
-
-					// 방법 5: 제목 텍스트 기반 검색 (최후의 방법)
-					if (notebooks.length === 0) {
-						// "내 노트북" 섹션 찾기
-						const sections = document.querySelectorAll('[class*="section"], [class*="content"], main');
-						sections.forEach(section => {
-							const items = section.querySelectorAll('[role="button"], [role="listitem"], [class*="clickable"]');
-							items.forEach((item, index) => {
-								const text = item.textContent.trim();
-								// 날짜 패턴이 포함된 항목은 노트북일 가능성 높음
-								if (text && text.match(/\\d{4}.*\\d{1,2}.*\\d{1,2}/) && !seen.has(text.substring(0, 50))) {
-									// 첫 줄만 제목으로 사용
-									const lines = text.split('\\n');
-									const title = lines[0].trim();
-									if (title && !title.includes('새 노트') && !title.includes('만들기')) {
-										seen.add(title);
-										notebooks.push({
-											id: 'item-' + index,
-											title: title,
-											url: '',
-											itemIndex: index,
-											viewType: 'item'
-										});
-									}
-								}
-							});
-						});
-					}
-
-					console.log('[Bridge] Found notebooks:', notebooks, 'View type:', notebooks[0]?.viewType);
-					return notebooks;
-				})();
-			`);
+		// RPC 실패 시 DOM 폴백
+		try {
+			const result = await this.getNotebooksViaDOM(view);
 			return result || [];
 		} catch (error) {
-			console.error('[Star NotebookLM] Failed to get notebooks:', error);
+			console.error('[Star NotebookLM] DOM 노트북 목록도 실패:', error);
 			return [];
 		}
+	}
+
+	// wXbhsf RPC로 노트북 목록 가져오기
+	async getNotebooksViaRPC(view: NotebookLMView): Promise<NotebookInfo[]> {
+		if (!view.webview) return [];
+
+		const requestId = 'obsidian_list_' + Date.now();
+
+		await view.webview.executeJavaScript(`
+			(function() {
+				var requestId = "${requestId}";
+				window['__obsidian_result_' + requestId] = { pending: true };
+
+				// AT 토큰 추출
+				var atToken = null;
+				var scripts = document.querySelectorAll('script');
+				for (var i = 0; i < scripts.length; i++) {
+					var text = scripts[i].textContent || '';
+					var match = text.match(/"SNlM0e":"([^"]+)"/);
+					if (match) { atToken = match[1]; break; }
+				}
+				if (!atToken && window.WIZ_global_data && window.WIZ_global_data.SNlM0e) {
+					atToken = window.WIZ_global_data.SNlM0e;
+				}
+
+				if (!atToken) {
+					window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'No AT token' };
+					return;
+				}
+
+				var rpcId = 'wXbhsf';
+				var requestPayload = [null, 1, null, [2]];
+				var requestBody = [[[rpcId, JSON.stringify(requestPayload), null, "generic"]]];
+
+				var formData = new URLSearchParams();
+				formData.append('at', atToken);
+				formData.append('f.req', JSON.stringify(requestBody));
+
+				var xhr = new XMLHttpRequest();
+				xhr.open('POST', '/_/LabsTailwindUi/data/batchexecute?rpcids=' + rpcId, true);
+				xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+				xhr.withCredentials = true;
+
+				xhr.onload = function() {
+					try {
+						var text = xhr.responseText;
+						console.log('[RPC wXbhsf Response]', text.substring(0, 500));
+						if (xhr.status === 200 && text.includes('wrb.fr')) {
+							// batchexecute 응답 파싱
+							var notebooks = [];
+							// ")]}\n" 접두사 제거 후 파싱
+							var lines = text.split('\\n');
+							for (var i = 0; i < lines.length; i++) {
+								try {
+									var parsed = JSON.parse(lines[i]);
+									if (Array.isArray(parsed) && parsed[0] && parsed[0][0] === 'wrb.fr') {
+										var innerData = JSON.parse(parsed[0][2]);
+										// innerData[0]이 노트북 목록 배열
+										if (Array.isArray(innerData) && Array.isArray(innerData[0])) {
+											innerData[0].forEach(function(nb) {
+												if (nb && nb[0]) {
+													notebooks.push({
+														id: nb[0],
+														title: (nb[1] || nb[2] || 'Untitled').toString(),
+														url: 'https://notebooklm.google.com/notebook/' + nb[0],
+														viewType: 'rpc'
+													});
+												}
+											});
+										}
+									}
+								} catch(e) {}
+							}
+							window['__obsidian_result_' + requestId] = { success: true, pending: false, notebooks: notebooks };
+						} else {
+							window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'API error: ' + xhr.status };
+						}
+					} catch(e) {
+						window['__obsidian_result_' + requestId] = { success: false, pending: false, error: e.message };
+					}
+				};
+
+				xhr.onerror = function() {
+					window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'Network error' };
+				};
+
+				xhr.send(formData.toString());
+			})();
+		`);
+
+		// 결과 폴링 (최대 8초)
+		let result = null;
+		for (let i = 0; i < 16; i++) {
+			await new Promise(resolve => setTimeout(resolve, 500));
+			result = await view.webview.executeJavaScript(`
+				(function() {
+					var r = window['__obsidian_result_${requestId}'];
+					if (r && !r.pending) {
+						delete window['__obsidian_result_${requestId}'];
+						return r;
+					}
+					return null;
+				})();
+			`);
+			if (result) break;
+		}
+
+		if (result?.success && result.notebooks) {
+			return result.notebooks;
+		}
+		return [];
+	}
+
+	// DOM 스크래핑으로 노트북 목록 가져오기 (폴백)
+	async getNotebooksViaDOM(view: NotebookLMView): Promise<NotebookInfo[]> {
+		if (!view.webview) return [];
+
+		const result = await view.webview.executeJavaScript(`
+			(function() {
+				var notebooks = [];
+				var seen = new Set();
+
+				// 방법 1: project-table (모바일/좁은 화면)
+				var table = document.querySelector('table.project-table');
+				if (table) {
+					var rows = table.querySelectorAll('tbody tr, tr');
+					rows.forEach(function(row, index) {
+						var titleEl = row.querySelector('.project-table-title, [class*="table-title"]');
+						if (titleEl) {
+							var title = titleEl.textContent.trim();
+							if (title && !seen.has(title)) {
+								seen.add(title);
+								notebooks.push({ id: 'row-' + index, title: title, url: '', viewType: 'table' });
+							}
+						}
+					});
+				}
+
+				// 방법 2: project-button 요소 (PC 카드 뷰)
+				if (notebooks.length === 0) {
+					var projectButtons = document.querySelectorAll('project-button.project-button');
+					projectButtons.forEach(function(btn, index) {
+						var titleEl = btn.querySelector('span.project-button-title, .project-button-title');
+						if (titleEl) {
+							var title = titleEl.textContent.trim();
+							if (title && !seen.has(title) && !title.includes('새 노트') && !title.includes('만들기')) {
+								seen.add(title);
+								notebooks.push({ id: 'projectbtn-' + index, title: title, url: '', viewType: 'projectButton' });
+							}
+						}
+					});
+				}
+
+				// 방법 3: a[href] 링크
+				if (notebooks.length === 0) {
+					document.querySelectorAll('a[href*="/notebook/"]').forEach(function(el) {
+						var href = el.getAttribute('href') || '';
+						var match = href.match(/\\/notebook\\/([^/\\?]+)/);
+						if (match && !seen.has(match[1])) {
+							seen.add(match[1]);
+							var title = el.textContent.trim() || 'Untitled notebook';
+							if (!title.includes('새 노트') && !title.includes('만들기')) {
+								notebooks.push({
+									id: match[1], title: title,
+									url: 'https://notebooklm.google.com' + href, viewType: 'link'
+								});
+							}
+						}
+					});
+				}
+
+				console.log('[Bridge DOM] Found notebooks:', notebooks.length);
+				return notebooks;
+			})();
+		`);
+		return result || [];
 	}
 
 	// 노트북 선택 모달 표시
@@ -752,7 +1043,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 			if (selected) {
 				// 기존 노트북 선택
-				new Notice(`"${selected.title}" 노트북으로 이동 중...`);
+				new Notice(t('notice.movingToNotebook', { title: selected.title }));
 
 				if (view && view.webview) {
 					if (selected.url) {
@@ -835,7 +1126,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 				}
 			} else {
 				// 새 노트북 만들기
-				new Notice('새 노트북 생성 중...');
+				new Notice(t('notice.creatingNotebook'));
 
 				if (view && view.webview) {
 					// 새 노트북 만들기 버튼 클릭
@@ -899,52 +1190,159 @@ export default class StarNotebookLMPlugin extends Plugin {
 	async createNewNotebookAndAddSource(view: NotebookLMView, note: NoteData) {
 		if (!view.webview) return;
 
+		new Notice(t('notice.creatingNotebookAPI'));
+
 		try {
-			// 새 노트북 만들기 버튼 클릭
+			// CCqFvf RPC로 새 노트북 생성
+			const notebookTitle = note.title || 'Obsidian Notes';
+			const encodedTitle = Buffer.from(notebookTitle, 'utf-8').toString('base64');
+			const requestId = 'obsidian_create_nb_' + Date.now();
+
 			await view.webview.executeJavaScript(`
-				(async function() {
-					// "+ 만들기" 버튼 찾기
-					const createBtnSelectors = [
-						'button:has-text("만들기")',
-						'button:has-text("Create")',
-						'button[aria-label*="Create"]',
-						'button[aria-label*="만들기"]',
-						'[class*="create"] button',
-						'button[class*="create"]'
-					];
+				(function() {
+					function decodeBase64UTF8(base64) {
+						var binary = atob(base64);
+						var bytes = new Uint8Array(binary.length);
+						for (var i = 0; i < binary.length; i++) {
+							bytes[i] = binary.charCodeAt(i);
+						}
+						return new TextDecoder('utf-8').decode(bytes);
+					}
 
-					let createBtn = null;
+					var requestId = "${requestId}";
+					var title = decodeBase64UTF8("${encodedTitle}");
+					window['__obsidian_result_' + requestId] = { pending: true };
 
-					// 버튼 텍스트로 찾기
-					const allButtons = document.querySelectorAll('button');
-					for (const btn of allButtons) {
-						const text = btn.textContent.toLowerCase();
+					// AT 토큰 추출
+					var atToken = null;
+					var scripts = document.querySelectorAll('script');
+					for (var i = 0; i < scripts.length; i++) {
+						var text = scripts[i].textContent || '';
+						var match = text.match(/"SNlM0e":"([^"]+)"/);
+						if (match) { atToken = match[1]; break; }
+					}
+					if (!atToken && window.WIZ_global_data && window.WIZ_global_data.SNlM0e) {
+						atToken = window.WIZ_global_data.SNlM0e;
+					}
+
+					if (!atToken) {
+						window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'No AT token' };
+						return;
+					}
+
+					var rpcId = 'CCqFvf';
+					var requestPayload = [title, null, null, [2], [1]];
+					var requestBody = [[[rpcId, JSON.stringify(requestPayload), null, "generic"]]];
+
+					var formData = new URLSearchParams();
+					formData.append('at', atToken);
+					formData.append('f.req', JSON.stringify(requestBody));
+
+					var xhr = new XMLHttpRequest();
+					xhr.open('POST', '/_/LabsTailwindUi/data/batchexecute?rpcids=' + rpcId, true);
+					xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+					xhr.withCredentials = true;
+
+					xhr.onload = function() {
+						try {
+							var text = xhr.responseText;
+							console.log('[RPC CCqFvf Response]', text.substring(0, 500));
+							if (xhr.status === 200 && text.includes('wrb.fr')) {
+								// 응답에서 새 노트북 ID 추출
+								var notebookId = null;
+								var lines = text.split('\\n');
+								for (var i = 0; i < lines.length; i++) {
+									try {
+										var parsed = JSON.parse(lines[i]);
+										if (Array.isArray(parsed) && parsed[0] && parsed[0][0] === 'wrb.fr') {
+											var innerData = JSON.parse(parsed[0][2]);
+											if (innerData && innerData[0]) {
+												notebookId = innerData[0];
+											}
+										}
+									} catch(e) {}
+								}
+								window['__obsidian_result_' + requestId] = { success: true, pending: false, notebookId: notebookId };
+							} else {
+								window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'API error: ' + xhr.status };
+							}
+						} catch(e) {
+							window['__obsidian_result_' + requestId] = { success: false, pending: false, error: e.message };
+						}
+					};
+
+					xhr.onerror = function() {
+						window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'Network error' };
+					};
+
+					xhr.send(formData.toString());
+				})();
+			`);
+
+			// 결과 폴링 (최대 10초)
+			let result = null;
+			for (let i = 0; i < 20; i++) {
+				await new Promise(resolve => setTimeout(resolve, 500));
+				result = await view.webview.executeJavaScript(`
+					(function() {
+						var r = window['__obsidian_result_${requestId}'];
+						if (r && !r.pending) {
+							delete window['__obsidian_result_${requestId}'];
+							return r;
+						}
+						return null;
+					})();
+				`);
+				if (result) break;
+			}
+
+			if (result?.success && result.notebookId) {
+				new Notice(t('notice.notebookCreated', { title: notebookTitle }));
+				// 새 노트북으로 이동 후 소스 추가
+				view.webview.loadURL('https://notebooklm.google.com/notebook/' + result.notebookId);
+				setTimeout(() => {
+					this.addSourceToNotebook(view, note);
+				}, 3000);
+			} else {
+				// RPC 실패 시 DOM 폴백
+				console.log('[Star NotebookLM] 노트북 생성 RPC 실패, DOM 폴백');
+				await this.createNewNotebookViaDOM(view, note);
+			}
+
+		} catch (error) {
+			console.error('[Star NotebookLM] Create notebook failed:', error);
+			await this.createNewNotebookViaDOM(view, note);
+		}
+	}
+
+	// DOM 방식 노트북 생성 (폴백)
+	async createNewNotebookViaDOM(view: NotebookLMView, note: NoteData) {
+		if (!view.webview) return;
+
+		try {
+			await view.webview.executeJavaScript(`
+				(function() {
+					var allButtons = document.querySelectorAll('button');
+					for (var i = 0; i < allButtons.length; i++) {
+						var text = allButtons[i].textContent.toLowerCase();
 						if (text.includes('만들기') || text.includes('create') || text.includes('new')) {
-							createBtn = btn;
-							break;
+							allButtons[i].click();
+							console.log('[Obsidian Bridge] Create button clicked (DOM fallback)');
+							return { success: true };
 						}
 					}
-
-					if (createBtn) {
-						createBtn.click();
-						console.log('[Obsidian Bridge] Create button clicked');
-						return { success: true, action: 'clicked_create' };
-					}
-
 					return { success: false, error: 'Create button not found' };
 				})();
 			`);
 
-			new Notice('새 노트북이 생성되면 소스가 자동 추가됩니다.\n잠시 기다려주세요...');
-
-			// 새 노트북 페이지 로드 후 소스 추가
+			new Notice(t('notice.waitingNotebook'));
 			setTimeout(() => {
 				this.addSourceToNotebook(view, note);
 			}, 4000);
 
 		} catch (error) {
-			console.error('[Star NotebookLM] Create notebook failed:', error);
-			new Notice('새 노트북 생성에 실패했습니다. 수동으로 생성해주세요.');
+			console.error('[Star NotebookLM] DOM Create notebook failed:', error);
+			new Notice(t('notice.notebookCreateFailed'));
 			this.addToQueue(note);
 		}
 	}
@@ -984,7 +1382,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		const title = note.title;
 		const content = note.content;
-		new Notice(`"${title}" 텍스트 소스 API로 추가 중...`);
+		new Notice(t('notice.addingTextSource', { title }));
 
 		try {
 			// Step 1: 노트북 ID와 at 토큰 추출
@@ -1014,13 +1412,13 @@ export default class StarNotebookLMPlugin extends Plugin {
 			console.log('[Star NotebookLM] Page info:', pageInfo);
 
 			if (!pageInfo.notebookId) {
-				new Notice('노트북을 먼저 선택해주세요.');
+				new Notice(t('notice.selectNotebookFirst'));
 				await this.addSourceViaDOM(view, note);
 				return;
 			}
 
 			if (!pageInfo.atToken) {
-				new Notice('인증 토큰을 찾을 수 없습니다. DOM 방식으로 전환...');
+				new Notice(t('notice.noAuthToken'));
 				await this.addSourceViaDOM(view, note);
 				return;
 			}
@@ -1054,17 +1452,24 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 					var rpcId = 'izAoDd';
 
-					// nlm-py에서 검증된 텍스트 소스 페이로드
+					// nlm-py v0.3.4 검증 텍스트 소스 페이로드
 					var requestPayload = [
 						[
 							[
 								null,
 								[title, content],
 								null,
-								2
+								null,
+								null,
+								null,
+								null,
+								null
 							]
 						],
-						notebookId
+						notebookId,
+						[2],
+						null,
+						null
 					];
 
 					var requestBody = [[[rpcId, JSON.stringify(requestPayload), null, "generic"]]];
@@ -1116,16 +1521,16 @@ export default class StarNotebookLMPlugin extends Plugin {
 			console.log('[Star NotebookLM] Text API result:', result);
 
 			if (result?.success) {
-				new Notice(`✅ "${title}" 텍스트 소스 추가 완료!`);
+				new Notice(t('notice.textSourceAdded', { title }));
 			} else {
 				console.log('[Star NotebookLM] Text API failed, falling back to DOM');
-				new Notice('API 실패. DOM 방식으로 재시도...');
+				new Notice(t('notice.apiFailed'));
 				await this.addSourceViaDOM(view, note);
 			}
 
 		} catch (error) {
 			console.error('[Star NotebookLM] Text API failed:', error);
-			new Notice('API 실패. DOM 방식으로 재시도...');
+			new Notice(t('notice.apiFailed'));
 			await this.addSourceViaDOM(view, note);
 		}
 	}
@@ -1134,7 +1539,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 	async addUrlSourceViaAPI(view: NotebookLMView, note: NoteData) {
 		if (!view.webview || !note.shareLink) return;
 
-		new Notice(`"${note.title}" URL 소스 API로 추가 중...`);
+		new Notice(t('notice.addingUrlSource', { title: note.title }));
 
 		try {
 			// Step 1: 노트북 ID와 at 토큰 추출
@@ -1164,12 +1569,12 @@ export default class StarNotebookLMPlugin extends Plugin {
 			console.log('[Star NotebookLM] Page info:', pageInfo);
 
 			if (!pageInfo.notebookId) {
-				new Notice('노트북을 먼저 선택해주세요.');
+				new Notice(t('notice.selectNotebookFirst'));
 				return;
 			}
 
 			if (!pageInfo.atToken) {
-				new Notice('인증 토큰을 찾을 수 없습니다. DOM 방식으로 전환...');
+				new Notice(t('notice.noAuthToken'));
 				await this.addLinkSourceToNotebook(view, note);
 				return;
 			}
@@ -1244,15 +1649,15 @@ export default class StarNotebookLMPlugin extends Plugin {
 			console.log('[Star NotebookLM] URL API result:', result);
 
 			if (result?.success) {
-				new Notice(`✅ "${note.title}" URL 소스 추가 완료!`);
+				new Notice(t('notice.urlSourceAdded', { title: note.title }));
 			} else {
-				new Notice('API 실패. DOM 방식으로 재시도...');
+				new Notice(t('notice.apiFailed'));
 				await this.addLinkSourceToNotebook(view, note);
 			}
 
 		} catch (error) {
 			console.error('[Star NotebookLM] URL API failed:', error);
-			new Notice('API 실패. DOM 방식으로 재시도...');
+			new Notice(t('notice.apiFailed'));
 			await this.addLinkSourceToNotebook(view, note);
 		}
 	}
@@ -1262,7 +1667,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 		if (!view.webview) return;
 
 		const content = '# ' + note.title + '\n\n' + note.content;
-		new Notice(`"${note.title}" DOM 방식으로 소스 추가 중...`);
+		new Notice(t('notice.addingDomSource', { title: note.title }));
 
 		try {
 			// Step 0: 모바일 뷰인 경우 "출처" 탭으로 전환
@@ -1519,22 +1924,22 @@ export default class StarNotebookLMPlugin extends Plugin {
 			console.log('[Star NotebookLM] Step 4 (삽입 버튼):', step4);
 
 			if (step3?.success && step4?.success) {
-				new Notice(`✅ "${note.title}" 소스가 추가되었습니다!`, 5000);
+				new Notice(t('notice.sourceAdded', { title: note.title }), 5000);
 			} else if (step3?.success) {
-				new Notice(`📝 텍스트 입력 완료!\n"삽입" 버튼을 클릭해주세요.`, 5000);
+				new Notice(t('notice.manualInsert'), 5000);
 			} else {
 				// 자동화 실패 시 클립보드로 폴백
 				await navigator.clipboard.writeText(content);
-				new Notice(`📋 자동 입력 실패. 클립보드에 복사됨.\n\nCmd+V로 붙여넣기 후 삽입 클릭`, 8000);
+				new Notice(t('notice.clipboardFallback'), 8000);
 			}
 
 		} catch (error) {
 			console.error('[Star NotebookLM] Auto add source failed:', error);
 			try {
 				await navigator.clipboard.writeText(content);
-				new Notice(`📋 "${note.title}" 클립보드에 복사됨.\n\n수동으로 붙여넣기 해주세요.`, 8000);
+				new Notice(t('notice.clipboardCopied', { title: note.title }), 8000);
 			} catch (e) {
-				new Notice('소스 추가에 실패했습니다.', 5000);
+				new Notice(t('notice.sourceAddFailed'), 5000);
 			}
 		}
 	}
@@ -1717,21 +2122,21 @@ export default class StarNotebookLMPlugin extends Plugin {
 			console.log('[Star NotebookLM] Link Step 5 (삽입 버튼):', step5);
 
 			if (step4?.success && step5?.success) {
-				new Notice(`✅ "${note.title}" 링크 소스가 추가되었습니다!\n(${note.shareLink})`, 5000);
+				new Notice(t('notice.linkSourceAdded', { title: note.title, link: note.shareLink! }), 5000);
 			} else if (step4?.success) {
-				new Notice(`📝 URL 입력 완료!\n"삽입" 버튼을 클릭해주세요.`, 5000);
+				new Notice(t('notice.manualUrlInsert'), 5000);
 			} else {
 				await navigator.clipboard.writeText(note.shareLink);
-				new Notice(`📋 자동 입력 실패. URL이 클립보드에 복사됨.\n\n${note.shareLink}`, 8000);
+				new Notice(t('notice.urlClipboardFallback', { link: note.shareLink! }), 8000);
 			}
 
 		} catch (error) {
 			console.error('[Star NotebookLM] Link source add failed:', error);
 			try {
 				await navigator.clipboard.writeText(note.shareLink!);
-				new Notice(`📋 "${note.title}" URL이 클립보드에 복사됨.\n\n수동으로 붙여넣기 해주세요.`, 8000);
+				new Notice(t('notice.urlClipboardCopied', { title: note.title }), 8000);
 			} catch (e) {
-				new Notice('링크 소스 추가에 실패했습니다.', 5000);
+				new Notice(t('notice.linkAddFailed'), 5000);
 			}
 		}
 	}
@@ -1744,11 +2149,11 @@ export default class StarNotebookLMPlugin extends Plugin {
 	async debugWebviewDOM() {
 		const view = this.getNotebookLMView();
 		if (!view || !view.webview) {
-			new Notice('NotebookLM 웹뷰가 열려있지 않습니다.\n먼저 NotebookLM을 열어주세요.');
+			new Notice(t('notice.webviewNotOpen'));
 			return;
 		}
 
-		new Notice('DOM 정보 수집 중...');
+		new Notice(t('notice.collectingDom'));
 
 		try {
 			const domInfo = await view.webview.executeJavaScript(`
@@ -1866,13 +2271,13 @@ export default class StarNotebookLMPlugin extends Plugin {
 			const debugPath = 'notebooklm-debug.json';
 
 			await this.app.vault.adapter.write(debugPath, debugContent);
-			new Notice(`DOM 정보가 ${debugPath}에 저장되었습니다.\n\n버튼 ${domInfo.buttons.length}개\n노트북 링크 ${domInfo.notebookLinks.length}개\n입력필드 ${domInfo.textInputs.length}개\n다이얼로그 ${domInfo.dialogs.length}개`, 8000);
+			new Notice(t('notice.domSaved', { path: debugPath, buttons: domInfo.buttons.length, links: domInfo.notebookLinks.length, inputs: domInfo.textInputs.length, dialogs: domInfo.dialogs.length }), 8000);
 
 			console.log('[Star NotebookLM] DOM Info:', domInfo);
 
 		} catch (error) {
 			console.error('[Star NotebookLM] Debug failed:', error);
-			new Notice('DOM 정보 수집 실패: ' + error.message);
+			new Notice(t('notice.domFailed', { error: error.message }));
 		}
 	}
 
@@ -1889,7 +2294,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		if (view && view.webview) {
 			// 노트북 목록 페이지로 이동
-			new Notice('노트북 목록을 가져오는 중...');
+			new Notice(t('notice.fetchingNotebooks'));
 			view.webview.loadURL('https://notebooklm.google.com');
 
 			// 페이지 로드 대기 후 노트북 목록 가져오고 모달 표시
@@ -1932,7 +2337,7 @@ class NotebookLMView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'NotebookLM';
+		return t('view.displayText');
 	}
 
 	getIcon(): string {
@@ -1948,11 +2353,11 @@ class NotebookLMView extends ItemView {
 		const toolbar = container.createDiv('notebooklm-toolbar');
 
 		// 새로고침 버튼
-		const refreshBtn = toolbar.createEl('button', { text: '🔄 새로고침' });
+		const refreshBtn = toolbar.createEl('button', { text: t('view.refresh') });
 		refreshBtn.onclick = () => this.refresh();
 
 		// 노트북 목록 버튼
-		const listBtn = toolbar.createEl('button', { text: '📚 노트북 목록' });
+		const listBtn = toolbar.createEl('button', { text: t('view.notebookList') });
 		listBtn.onclick = () => this.goToNotebookList();
 
 		// 상태 표시
@@ -2224,19 +2629,19 @@ class NotebookLMView extends ItemView {
 			.filter(([, item]) => item.status === 'pending');
 
 		if (pendingNotes.length === 0) {
-			new Notice('대기열이 비어있습니다');
+			new Notice(t('notice.emptyQueue'));
 			return;
 		}
 
 		// 현재 노트북 안에 있는지 확인
 		if (!this.plugin.currentPageState?.isInsideNotebook) {
-			new Notice('먼저 노트북을 선택해주세요');
+			new Notice(t('notice.selectNotebook'));
 			return;
 		}
 
 		const [id, item] = pendingNotes[0];
 
-		new Notice(`"${item.note.title}" 추가 중...`);
+		new Notice(t('notice.addingFromQueue', { title: item.note.title }));
 
 		this.sendToWebview('addSource', {
 			title: item.note.title,
@@ -2247,7 +2652,7 @@ class NotebookLMView extends ItemView {
 		setTimeout(() => {
 			this.plugin.noteQueue.delete(id);
 			this.plugin.updateStatusBar();
-			new Notice(`"${item.note.title}" 추가 완료!`);
+			new Notice(t('notice.addedFromQueue', { title: item.note.title }));
 		}, 2000);
 	}
 }
@@ -2268,27 +2673,53 @@ class NotebookSelectModal extends Modal {
 	}
 
 	onOpen() {
+		this.renderContent();
+	}
+
+	renderContent() {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass('notebooklm-select-modal');
 
 		// 헤더
-		contentEl.createEl('h2', { text: '📚 노트북 선택' });
+		const headerDiv = contentEl.createDiv('modal-header-row');
+		headerDiv.style.display = 'flex';
+		headerDiv.style.justifyContent = 'space-between';
+		headerDiv.style.alignItems = 'center';
+		headerDiv.createEl('h2', { text: t('modal.selectNotebook') });
+
+		// 새로고침 버튼
+		const refreshBtn = headerDiv.createEl('button', { text: t('modal.refresh'), cls: 'mod-cta' });
+		refreshBtn.style.fontSize = '12px';
+		refreshBtn.style.padding = '4px 12px';
+		refreshBtn.onclick = async () => {
+			refreshBtn.textContent = t('modal.loading');
+			refreshBtn.disabled = true;
+			try {
+				this.notebooks = await this.plugin.getNotebooksFromWebview();
+				this.renderContent();
+			} catch {
+				refreshBtn.textContent = t('modal.refresh');
+				refreshBtn.disabled = false;
+				new Notice(t('notice.refreshFailed'));
+			}
+		};
+
 		contentEl.createEl('p', {
-			text: `"${this.noteTitle}" 노트를 어디에 추가할까요?`,
+			text: t('modal.whereToAdd', { title: this.noteTitle }),
 			cls: 'modal-description'
 		});
 
 		// 새 노트북 만들기 섹션
 		const newSection = contentEl.createDiv('modal-section');
-		newSection.createEl('h3', { text: '새 노트북' });
+		newSection.createEl('h3', { text: t('modal.newNotebook') });
 
 		const newItem = newSection.createDiv('notebook-item new');
 		newItem.innerHTML = `
-			<span class="notebook-icon">➕</span>
+			<span class="notebook-icon">+</span>
 			<div class="notebook-info">
-				<span class="notebook-title">새 노트북 만들기</span>
-				<span class="notebook-desc">NotebookLM에서 새 노트북을 생성합니다</span>
+				<span class="notebook-title">${t('modal.createNew')}</span>
+				<span class="notebook-desc">${t('modal.createNewDesc')}</span>
 			</div>
 		`;
 		newItem.onclick = () => {
@@ -2299,7 +2730,7 @@ class NotebookSelectModal extends Modal {
 		// 기존 노트북 섹션
 		if (this.notebooks.length > 0) {
 			const existingSection = contentEl.createDiv('modal-section');
-			existingSection.createEl('h3', { text: `기존 노트북 (${this.notebooks.length}개)` });
+			existingSection.createEl('h3', { text: t('modal.existingNotebooks', { count: this.notebooks.length }) });
 
 			const list = existingSection.createDiv('notebook-list');
 
@@ -2319,14 +2750,14 @@ class NotebookSelectModal extends Modal {
 		} else {
 			const emptyMsg = contentEl.createDiv('empty-message');
 			emptyMsg.innerHTML = `
-				<p>⚠️ 기존 노트북을 찾을 수 없습니다.</p>
-				<p class="hint">NotebookLM 웹뷰에서 노트북 목록 페이지로 이동한 후 다시 시도해주세요.</p>
+				<p>${t('modal.noNotebooks')}</p>
+				<p class="hint">${t('modal.noNotebooksHint')}</p>
 			`;
 		}
 
 		// 취소 버튼
 		const footer = contentEl.createDiv('modal-footer');
-		const cancelBtn = footer.createEl('button', { text: '취소' });
+		const cancelBtn = footer.createEl('button', { text: t('modal.cancel') });
 		cancelBtn.onclick = () => this.close();
 	}
 
@@ -2348,11 +2779,27 @@ class StarNotebookLMSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Star NotebookLM 설정' });
+		containerEl.createEl('h2', { text: t('settings.title') });
+
+		// 언어 설정 (최상단)
+		new Setting(containerEl)
+			.setName(t('settings.language'))
+			.setDesc(t('settings.languageDesc'))
+			.addDropdown(dropdown => dropdown
+				.addOption('auto', t('settings.langAuto'))
+				.addOption('ko', t('settings.langKo'))
+				.addOption('en', t('settings.langEn'))
+				.setValue(this.plugin.settings.language)
+				.onChange(async (value: string) => {
+					this.plugin.settings.language = value as 'auto' | 'ko' | 'en';
+					currentLang = getLanguage(this.plugin.settings.language);
+					await this.plugin.saveSettings();
+					this.display(); // 설정 UI 리프레시
+				}));
 
 		new Setting(containerEl)
-			.setName('메타데이터 포함')
-			.setDesc('노트 전송 시 생성/수정 시간, 태그 등 메타데이터 포함')
+			.setName(t('settings.includeMetadata'))
+			.setDesc(t('settings.includeMetadataDesc'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.includeMetadata)
 				.onChange(async (value) => {
@@ -2361,8 +2808,8 @@ class StarNotebookLMSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Frontmatter 포함')
-			.setDesc('노트 전송 시 YAML frontmatter 포함')
+			.setName(t('settings.includeFrontmatter'))
+			.setDesc(t('settings.includeFrontmatterDesc'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.includeFrontmatter)
 				.onChange(async (value) => {
@@ -2372,31 +2819,31 @@ class StarNotebookLMSettingTab extends PluginSettingTab {
 
 		// 소스 추가 방식 선택
 		new Setting(containerEl)
-			.setName('소스 추가 방식')
-			.setDesc('NotebookLM에 소스를 추가하는 방식을 선택합니다')
+			.setName(t('settings.sourceMethod'))
+			.setDesc(t('settings.sourceMethodDesc'))
 			.addDropdown(dropdown => dropdown
-				.addOption('api', 'API 직접 호출 (빠름, 권장)')
-				.addOption('dom', 'DOM 조작 (안정적)')
+				.addOption('api', t('settings.sourceApi'))
+				.addOption('dom', t('settings.sourceDom'))
 				.setValue(this.plugin.settings.sourceAddMethod)
-				.onChange(async (value: 'dom' | 'api') => {
-					this.plugin.settings.sourceAddMethod = value;
+				.onChange(async (value: string) => {
+					this.plugin.settings.sourceAddMethod = value as SourceAddMethod;
 					await this.plugin.saveSettings();
 				}));
 
 		// 사용법
-		containerEl.createEl('h3', { text: '사용법' });
+		containerEl.createEl('h3', { text: t('settings.usage') });
 
 		const usageList = containerEl.createEl('div');
 		usageList.style.marginLeft = '8px';
 
 		usageList.createEl('p', {
-			text: '1. 왼쪽 리본의 책 아이콘(book-open)을 클릭하여 NotebookLM 패널을 엽니다.'
+			text: t('settings.usage1')
 		});
 		usageList.createEl('p', {
-			text: '2. NotebookLM 패널에서 Google 계정으로 로그인합니다.'
+			text: t('settings.usage2')
 		});
 		usageList.createEl('p', {
-			text: '3. 노트를 전송하는 방법:'
+			text: t('settings.usage3')
 		});
 
 		const methodList = usageList.createEl('ul');
@@ -2404,20 +2851,20 @@ class StarNotebookLMSettingTab extends PluginSettingTab {
 		methodList.style.marginTop = '4px';
 
 		methodList.createEl('li', {
-			text: '리본의 전송 아이콘(send) 클릭'
+			text: t('settings.usageMethod1')
 		});
 		methodList.createEl('li', {
-			text: '파일 탐색기에서 노트 우클릭 → "NotebookLM에 전송"'
+			text: t('settings.usageMethod2')
 		});
 		methodList.createEl('li', {
-			text: '에디터에서 우클릭 → "NotebookLM에 전송" (전체 노트)'
+			text: t('settings.usageMethod3')
 		});
 		methodList.createEl('li', {
-			text: '텍스트 선택 후 우클릭 → "선택 영역을 NotebookLM에 전송"'
+			text: t('settings.usageMethod4')
 		});
 
 		usageList.createEl('p', {
-			text: '4. 노트북 선택 모달에서 기존 노트북을 선택하거나 새로 만듭니다.'
+			text: t('settings.usage4')
 		});
 	}
 }

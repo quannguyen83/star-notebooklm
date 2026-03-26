@@ -30,11 +30,228 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
 var NOTEBOOKLM_VIEW_TYPE = "notebooklm-webview";
 var DEFAULT_SETTINGS = {
+  language: "auto",
   includeMetadata: true,
   includeFrontmatter: false,
   sourceAddMethod: "api"
   // 기본값: API 방식
 };
+function detectLanguage() {
+  var _a, _b;
+  const locale = ((_b = (_a = window.moment) == null ? void 0 : _a.locale) == null ? void 0 : _b.call(_a)) || navigator.language || "en";
+  return locale.startsWith("ko") ? "ko" : "en";
+}
+function getLanguage(setting) {
+  if (setting === "auto")
+    return detectLanguage();
+  return setting;
+}
+var i18n = {
+  ko: {
+    // ribbons & commands
+    "ribbon.send": "NotebookLM\uC5D0 \uC804\uC1A1",
+    "ribbon.open": "NotebookLM \uC5F4\uAE30",
+    "cmd.sendNote": "\uD604\uC7AC \uB178\uD2B8\uB97C NotebookLM\uC5D0 \uC804\uC1A1",
+    "cmd.sendSelection": "\uC120\uD0DD\uB41C \uD14D\uC2A4\uD2B8\uB97C NotebookLM\uC5D0 \uC804\uC1A1",
+    "cmd.open": "NotebookLM \uC5F4\uAE30",
+    // context menus
+    "menu.send": "NotebookLM\uC5D0 \uC804\uC1A1",
+    "menu.sendMulti": "NotebookLM\uC5D0 \uC804\uC1A1 ({count}\uAC1C)",
+    "menu.sendSelection": "\uC120\uD0DD \uC601\uC5ED\uC744 NotebookLM\uC5D0 \uC804\uC1A1",
+    // status bar
+    "status.queue": "\u{1F4CB} Star: {count}",
+    "status.queueTooltip": "Star NotebookLM\n\uB300\uAE30\uC5F4: {count}\uAC1C",
+    "status.ready": "\u{1F4D8} Star NLM",
+    "status.readyTooltip": "Star NotebookLM \uC900\uBE44\uB428",
+    // notices
+    "notice.selectText": "\uD14D\uC2A4\uD2B8\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694",
+    "notice.noActiveNote": "\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    "notice.fetchingNotebooks": "\uB178\uD2B8\uBD81 \uBAA9\uB85D\uC744 \uAC00\uC838\uC624\uB294 \uC911...",
+    "notice.movingToNotebook": '"{title}" \uB178\uD2B8\uBD81\uC73C\uB85C \uC774\uB3D9 \uC911...',
+    "notice.createNewManual": "NotebookLM\uC5D0\uC11C \uC0C8 \uB178\uD2B8\uBD81\uC744 \uB9CC\uB4E4\uC5B4\uC8FC\uC138\uC694.\n\uB178\uD2B8\uAC00 \uB300\uAE30\uC5F4\uC5D0 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    "notice.preparingNotes": "{count}\uAC1C \uB178\uD2B8 \uC900\uBE44 \uC911...",
+    "notice.sendingNotes": '"{title}" \uB178\uD2B8\uBD81\uC73C\uB85C {count}\uAC1C \uB178\uD2B8 \uC804\uC1A1 \uC911...',
+    "notice.creatingNotebook": "\uC0C8 \uB178\uD2B8\uBD81 \uC0DD\uC131 \uC911...",
+    "notice.creatingNotebookAPI": "\uC0C8 \uB178\uD2B8\uBD81 \uC0DD\uC131 \uC911 (API)...",
+    "notice.notebookCreated": '\u2705 \uB178\uD2B8\uBD81 "{title}" \uC0DD\uC131 \uC644\uB8CC!',
+    "notice.waitingNotebook": "\uC0C8 \uB178\uD2B8\uBD81\uC774 \uC0DD\uC131\uB418\uBA74 \uC18C\uC2A4\uAC00 \uC790\uB3D9 \uCD94\uAC00\uB429\uB2C8\uB2E4.\n\uC7A0\uC2DC \uAE30\uB2E4\uB824\uC8FC\uC138\uC694...",
+    "notice.notebookCreateFailed": "\uC0C8 \uB178\uD2B8\uBD81 \uC0DD\uC131\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC218\uB3D9\uC73C\uB85C \uC0DD\uC131\uD574\uC8FC\uC138\uC694.",
+    "notice.addingTextSource": '"{title}" \uD14D\uC2A4\uD2B8 \uC18C\uC2A4 API\uB85C \uCD94\uAC00 \uC911...',
+    "notice.selectNotebookFirst": "\uB178\uD2B8\uBD81\uC744 \uBA3C\uC800 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.",
+    "notice.noAuthToken": "\uC778\uC99D \uD1A0\uD070\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. DOM \uBC29\uC2DD\uC73C\uB85C \uC804\uD658...",
+    "notice.textSourceAdded": '\u2705 "{title}" \uD14D\uC2A4\uD2B8 \uC18C\uC2A4 \uCD94\uAC00 \uC644\uB8CC!',
+    "notice.apiFailed": "API \uC2E4\uD328. DOM \uBC29\uC2DD\uC73C\uB85C \uC7AC\uC2DC\uB3C4...",
+    "notice.addingUrlSource": '"{title}" URL \uC18C\uC2A4 API\uB85C \uCD94\uAC00 \uC911...',
+    "notice.urlSourceAdded": '\u2705 "{title}" URL \uC18C\uC2A4 \uCD94\uAC00 \uC644\uB8CC!',
+    "notice.addingDomSource": '"{title}" DOM \uBC29\uC2DD\uC73C\uB85C \uC18C\uC2A4 \uCD94\uAC00 \uC911...',
+    "notice.sourceAdded": '\u2705 "{title}" \uC18C\uC2A4\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4!',
+    "notice.manualInsert": '\u{1F4DD} \uD14D\uC2A4\uD2B8 \uC785\uB825 \uC644\uB8CC!\n"\uC0BD\uC785" \uBC84\uD2BC\uC744 \uD074\uB9AD\uD574\uC8FC\uC138\uC694.',
+    "notice.clipboardFallback": "\u{1F4CB} \uC790\uB3D9 \uC785\uB825 \uC2E4\uD328. \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.\n\nCmd+V\uB85C \uBD99\uC5EC\uB123\uAE30 \uD6C4 \uC0BD\uC785 \uD074\uB9AD",
+    "notice.clipboardCopied": '\u{1F4CB} "{title}" \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.\n\n\uC218\uB3D9\uC73C\uB85C \uBD99\uC5EC\uB123\uAE30 \uD574\uC8FC\uC138\uC694.',
+    "notice.sourceAddFailed": "\uC18C\uC2A4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
+    "notice.linkSourceAdded": '\u2705 "{title}" \uB9C1\uD06C \uC18C\uC2A4\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4!\n({link})',
+    "notice.manualUrlInsert": '\u{1F4DD} URL \uC785\uB825 \uC644\uB8CC!\n"\uC0BD\uC785" \uBC84\uD2BC\uC744 \uD074\uB9AD\uD574\uC8FC\uC138\uC694.',
+    "notice.urlClipboardFallback": "\u{1F4CB} \uC790\uB3D9 \uC785\uB825 \uC2E4\uD328. URL\uC774 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.\n\n{link}",
+    "notice.urlClipboardCopied": '\u{1F4CB} "{title}" URL\uC774 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.\n\n\uC218\uB3D9\uC73C\uB85C \uBD99\uC5EC\uB123\uAE30 \uD574\uC8FC\uC138\uC694.',
+    "notice.linkAddFailed": "\uB9C1\uD06C \uC18C\uC2A4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.",
+    "notice.webviewNotOpen": "NotebookLM \uC6F9\uBDF0\uAC00 \uC5F4\uB824\uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.\n\uBA3C\uC800 NotebookLM\uC744 \uC5F4\uC5B4\uC8FC\uC138\uC694.",
+    "notice.collectingDom": "DOM \uC815\uBCF4 \uC218\uC9D1 \uC911...",
+    "notice.domSaved": "DOM \uC815\uBCF4\uAC00 {path}\uC5D0 \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.\n\n\uBC84\uD2BC {buttons}\uAC1C\n\uB178\uD2B8\uBD81 \uB9C1\uD06C {links}\uAC1C\n\uC785\uB825\uD544\uB4DC {inputs}\uAC1C\n\uB2E4\uC774\uC5BC\uB85C\uADF8 {dialogs}\uAC1C",
+    "notice.domFailed": "DOM \uC815\uBCF4 \uC218\uC9D1 \uC2E4\uD328: {error}",
+    "notice.emptyQueue": "\uB300\uAE30\uC5F4\uC774 \uBE44\uC5B4\uC788\uC2B5\uB2C8\uB2E4",
+    "notice.selectNotebook": "\uBA3C\uC800 \uB178\uD2B8\uBD81\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694",
+    "notice.addingFromQueue": '"{title}" \uCD94\uAC00 \uC911...',
+    "notice.addedFromQueue": '"{title}" \uCD94\uAC00 \uC644\uB8CC!',
+    "notice.batchProgress": "\uCD94\uAC00 \uC911... ({current}/{total}) - {title}",
+    "notice.batchAllSuccess": "\u2705 {count}\uAC1C \uB178\uD2B8 \uBAA8\uB450 \uCD94\uAC00 \uC644\uB8CC!",
+    "notice.batchPartial": "\uC644\uB8CC! \uC131\uACF5: {success}\uAC1C, \uC2E4\uD328: {failed}\uAC1C",
+    "notice.refreshFailed": "\uB178\uD2B8\uBD81 \uBAA9\uB85D \uAC00\uC838\uC624\uAE30 \uC2E4\uD328. NotebookLM \uC6F9\uBDF0\uAC00 \uB85C\uB4DC\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD574\uC8FC\uC138\uC694.",
+    // modal
+    "modal.selectNotebook": "\uB178\uD2B8\uBD81 \uC120\uD0DD",
+    "modal.loading": "\uB85C\uB529 \uC911...",
+    "modal.refresh": "\uC0C8\uB85C\uACE0\uCE68",
+    "modal.whereToAdd": '"{title}" \uB178\uD2B8\uB97C \uC5B4\uB514\uC5D0 \uCD94\uAC00\uD560\uAE4C\uC694?',
+    "modal.newNotebook": "\uC0C8 \uB178\uD2B8\uBD81",
+    "modal.createNew": "\uC0C8 \uB178\uD2B8\uBD81 \uB9CC\uB4E4\uAE30",
+    "modal.createNewDesc": "NotebookLM\uC5D0\uC11C \uC0C8 \uB178\uD2B8\uBD81\uC744 \uC0DD\uC131\uD569\uB2C8\uB2E4",
+    "modal.existingNotebooks": "\uAE30\uC874 \uB178\uD2B8\uBD81 ({count}\uAC1C)",
+    "modal.noNotebooks": "\uAE30\uC874 \uB178\uD2B8\uBD81\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    "modal.noNotebooksHint": "NotebookLM \uC6F9\uBDF0\uAC00 \uC644\uC804\uD788 \uB85C\uB4DC\uB41C \uD6C4 \uC704\uC758 <strong>\uC0C8\uB85C\uACE0\uCE68</strong> \uBC84\uD2BC\uC744 \uB20C\uB7EC\uC8FC\uC138\uC694.",
+    "modal.cancel": "\uCDE8\uC18C",
+    // settings
+    "settings.title": "Star NotebookLM \uC124\uC815",
+    "settings.language": "\uC5B8\uC5B4",
+    "settings.languageDesc": "\uD50C\uB7EC\uADF8\uC778 UI \uC5B8\uC5B4",
+    "settings.langAuto": "\uC790\uB3D9 \uAC10\uC9C0",
+    "settings.langKo": "\uD55C\uAD6D\uC5B4",
+    "settings.langEn": "English",
+    "settings.includeMetadata": "\uBA54\uD0C0\uB370\uC774\uD130 \uD3EC\uD568",
+    "settings.includeMetadataDesc": "\uB178\uD2B8 \uC804\uC1A1 \uC2DC \uC0DD\uC131/\uC218\uC815 \uC2DC\uAC04, \uD0DC\uADF8 \uB4F1 \uBA54\uD0C0\uB370\uC774\uD130 \uD3EC\uD568",
+    "settings.includeFrontmatter": "Frontmatter \uD3EC\uD568",
+    "settings.includeFrontmatterDesc": "\uB178\uD2B8 \uC804\uC1A1 \uC2DC YAML frontmatter \uD3EC\uD568",
+    "settings.sourceMethod": "\uC18C\uC2A4 \uCD94\uAC00 \uBC29\uC2DD",
+    "settings.sourceMethodDesc": "NotebookLM\uC5D0 \uC18C\uC2A4\uB97C \uCD94\uAC00\uD558\uB294 \uBC29\uC2DD\uC744 \uC120\uD0DD\uD569\uB2C8\uB2E4",
+    "settings.sourceApi": "API \uC9C1\uC811 \uD638\uCD9C (\uBE60\uB984, \uAD8C\uC7A5)",
+    "settings.sourceDom": "DOM \uC870\uC791 (\uC548\uC815\uC801)",
+    "settings.usage": "\uC0AC\uC6A9\uBC95",
+    "settings.usage1": "1. \uC67C\uCABD \uB9AC\uBCF8\uC758 \uCC45 \uC544\uC774\uCF58(book-open)\uC744 \uD074\uB9AD\uD558\uC5EC NotebookLM \uD328\uB110\uC744 \uC5FD\uB2C8\uB2E4.",
+    "settings.usage2": "2. NotebookLM \uD328\uB110\uC5D0\uC11C Google \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778\uD569\uB2C8\uB2E4.",
+    "settings.usage3": "3. \uB178\uD2B8\uB97C \uC804\uC1A1\uD558\uB294 \uBC29\uBC95:",
+    "settings.usageMethod1": "\uB9AC\uBCF8\uC758 \uC804\uC1A1 \uC544\uC774\uCF58(send) \uD074\uB9AD",
+    "settings.usageMethod2": '\uD30C\uC77C \uD0D0\uC0C9\uAE30\uC5D0\uC11C \uB178\uD2B8 \uC6B0\uD074\uB9AD \u2192 "NotebookLM\uC5D0 \uC804\uC1A1"',
+    "settings.usageMethod3": '\uC5D0\uB514\uD130\uC5D0\uC11C \uC6B0\uD074\uB9AD \u2192 "NotebookLM\uC5D0 \uC804\uC1A1" (\uC804\uCCB4 \uB178\uD2B8)',
+    "settings.usageMethod4": '\uD14D\uC2A4\uD2B8 \uC120\uD0DD \uD6C4 \uC6B0\uD074\uB9AD \u2192 "\uC120\uD0DD \uC601\uC5ED\uC744 NotebookLM\uC5D0 \uC804\uC1A1"',
+    "settings.usage4": "4. \uB178\uD2B8\uBD81 \uC120\uD0DD \uBAA8\uB2EC\uC5D0\uC11C \uAE30\uC874 \uB178\uD2B8\uBD81\uC744 \uC120\uD0DD\uD558\uAC70\uB098 \uC0C8\uB85C \uB9CC\uB4ED\uB2C8\uB2E4.",
+    // view
+    "view.displayText": "NotebookLM",
+    "view.refresh": "\u{1F504} \uC0C8\uB85C\uACE0\uCE68",
+    "view.notebookList": "\u{1F4DA} \uB178\uD2B8\uBD81 \uBAA9\uB85D"
+  },
+  en: {
+    "ribbon.send": "Send to NotebookLM",
+    "ribbon.open": "Open NotebookLM",
+    "cmd.sendNote": "Send current note to NotebookLM",
+    "cmd.sendSelection": "Send selected text to NotebookLM",
+    "cmd.open": "Open NotebookLM",
+    "menu.send": "Send to NotebookLM",
+    "menu.sendMulti": "Send to NotebookLM ({count})",
+    "menu.sendSelection": "Send selection to NotebookLM",
+    "status.queue": "\u{1F4CB} Star: {count}",
+    "status.queueTooltip": "Star NotebookLM\nQueue: {count}",
+    "status.ready": "\u{1F4D8} Star NLM",
+    "status.readyTooltip": "Star NotebookLM Ready",
+    "notice.selectText": "Please select some text",
+    "notice.noActiveNote": "No active note",
+    "notice.fetchingNotebooks": "Fetching notebook list...",
+    "notice.movingToNotebook": 'Moving to "{title}" notebook...',
+    "notice.createNewManual": "Please create a new notebook in NotebookLM.\nNote has been added to the queue.",
+    "notice.preparingNotes": "Preparing {count} notes...",
+    "notice.sendingNotes": 'Sending {count} notes to "{title}" notebook...',
+    "notice.creatingNotebook": "Creating new notebook...",
+    "notice.creatingNotebookAPI": "Creating new notebook (API)...",
+    "notice.notebookCreated": '\u2705 Notebook "{title}" created!',
+    "notice.waitingNotebook": "Source will be added automatically when notebook is ready.\nPlease wait...",
+    "notice.notebookCreateFailed": "Failed to create notebook. Please create one manually.",
+    "notice.addingTextSource": 'Adding "{title}" as text source via API...',
+    "notice.selectNotebookFirst": "Please select a notebook first.",
+    "notice.noAuthToken": "Auth token not found. Switching to DOM method...",
+    "notice.textSourceAdded": '\u2705 "{title}" text source added!',
+    "notice.apiFailed": "API failed. Retrying with DOM method...",
+    "notice.addingUrlSource": 'Adding "{title}" as URL source via API...',
+    "notice.urlSourceAdded": '\u2705 "{title}" URL source added!',
+    "notice.addingDomSource": 'Adding "{title}" via DOM method...',
+    "notice.sourceAdded": '\u2705 "{title}" source added!',
+    "notice.manualInsert": '\u{1F4DD} Text input complete!\nPlease click the "Insert" button.',
+    "notice.clipboardFallback": "\u{1F4CB} Auto-input failed. Copied to clipboard.\n\nUse Cmd+V to paste, then click Insert",
+    "notice.clipboardCopied": '\u{1F4CB} "{title}" copied to clipboard.\n\nPlease paste manually.',
+    "notice.sourceAddFailed": "Failed to add source.",
+    "notice.linkSourceAdded": '\u2705 "{title}" link source added!\n({link})',
+    "notice.manualUrlInsert": '\u{1F4DD} URL input complete!\nPlease click the "Insert" button.',
+    "notice.urlClipboardFallback": "\u{1F4CB} Auto-input failed. URL copied to clipboard.\n\n{link}",
+    "notice.urlClipboardCopied": '\u{1F4CB} "{title}" URL copied to clipboard.\n\nPlease paste manually.',
+    "notice.linkAddFailed": "Failed to add link source.",
+    "notice.webviewNotOpen": "NotebookLM webview is not open.\nPlease open NotebookLM first.",
+    "notice.collectingDom": "Collecting DOM info...",
+    "notice.domSaved": "DOM info saved to {path}.\n\nButtons: {buttons}\nNotebook links: {links}\nInputs: {inputs}\nDialogs: {dialogs}",
+    "notice.domFailed": "DOM collection failed: {error}",
+    "notice.emptyQueue": "Queue is empty",
+    "notice.selectNotebook": "Please select a notebook first",
+    "notice.addingFromQueue": 'Adding "{title}"...',
+    "notice.addedFromQueue": '"{title}" added!',
+    "notice.batchProgress": "Adding... ({current}/{total}) - {title}",
+    "notice.batchAllSuccess": "\u2705 All {count} notes added!",
+    "notice.batchPartial": "Done! Success: {success}, Failed: {failed}",
+    "notice.refreshFailed": "Failed to fetch notebooks. Make sure NotebookLM webview is loaded.",
+    "modal.selectNotebook": "Select Notebook",
+    "modal.loading": "Loading...",
+    "modal.refresh": "Refresh",
+    "modal.whereToAdd": 'Where to add "{title}"?',
+    "modal.newNotebook": "New Notebook",
+    "modal.createNew": "Create New Notebook",
+    "modal.createNewDesc": "Create a new notebook in NotebookLM",
+    "modal.existingNotebooks": "Existing Notebooks ({count})",
+    "modal.noNotebooks": "No existing notebooks found.",
+    "modal.noNotebooksHint": "Please wait for NotebookLM webview to fully load, then click <strong>Refresh</strong> above.",
+    "modal.cancel": "Cancel",
+    "settings.title": "Star NotebookLM Settings",
+    "settings.language": "Language",
+    "settings.languageDesc": "Plugin UI language",
+    "settings.langAuto": "Auto Detect",
+    "settings.langKo": "\uD55C\uAD6D\uC5B4",
+    "settings.langEn": "English",
+    "settings.includeMetadata": "Include Metadata",
+    "settings.includeMetadataDesc": "Include creation/modification time, tags when sending notes",
+    "settings.includeFrontmatter": "Include Frontmatter",
+    "settings.includeFrontmatterDesc": "Include YAML frontmatter when sending notes",
+    "settings.sourceMethod": "Source Add Method",
+    "settings.sourceMethodDesc": "Method to add sources to NotebookLM",
+    "settings.sourceApi": "API Direct Call (fast, recommended)",
+    "settings.sourceDom": "DOM Manipulation (stable)",
+    "settings.usage": "Usage",
+    "settings.usage1": "1. Click the book icon (book-open) in the left ribbon to open NotebookLM panel.",
+    "settings.usage2": "2. Log in with your Google account in the NotebookLM panel.",
+    "settings.usage3": "3. Ways to send notes:",
+    "settings.usageMethod1": "Click the send icon in the ribbon",
+    "settings.usageMethod2": 'Right-click a note in file explorer \u2192 "Send to NotebookLM"',
+    "settings.usageMethod3": 'Right-click in editor \u2192 "Send to NotebookLM" (full note)',
+    "settings.usageMethod4": 'Select text, right-click \u2192 "Send selection to NotebookLM"',
+    "settings.usage4": "4. In the notebook selection modal, choose an existing notebook or create new.",
+    "view.displayText": "NotebookLM",
+    "view.refresh": "\u{1F504} Refresh",
+    "view.notebookList": "\u{1F4DA} Notebooks"
+  }
+};
+var currentLang = "ko";
+function t(key, params) {
+  var _a, _b;
+  let text = ((_a = i18n[currentLang]) == null ? void 0 : _a[key]) || ((_b = i18n["en"]) == null ? void 0 : _b[key]) || key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+    }
+  }
+  return text;
+}
 var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
@@ -43,41 +260,42 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   }
   async onload() {
     await this.loadSettings();
+    currentLang = getLanguage(this.settings.language);
     this.registerView(
       NOTEBOOKLM_VIEW_TYPE,
       (leaf) => new NotebookLMView(leaf, this)
     );
     this.statusBarItem = this.addStatusBarItem();
     this.updateStatusBar();
-    this.addRibbonIcon("send", "NotebookLM\uC5D0 \uC804\uC1A1", async () => {
+    this.addRibbonIcon("send", t("ribbon.send"), async () => {
       await this.sendCurrentNoteToQueue();
     });
-    this.addRibbonIcon("book-open", "NotebookLM \uC5F4\uAE30", async () => {
+    this.addRibbonIcon("book-open", t("ribbon.open"), async () => {
       await this.openNotebookLMView();
     });
     this.addCommand({
       id: "send-to-notebooklm",
-      name: "\uD604\uC7AC \uB178\uD2B8\uB97C NotebookLM\uC5D0 \uC804\uC1A1",
+      name: t("cmd.sendNote"),
       editorCallback: async (editor, view) => {
         await this.sendCurrentNoteToQueue();
       }
     });
     this.addCommand({
       id: "send-selection-to-notebooklm",
-      name: "\uC120\uD0DD\uB41C \uD14D\uC2A4\uD2B8\uB97C NotebookLM\uC5D0 \uC804\uC1A1",
+      name: t("cmd.sendSelection"),
       editorCallback: async (editor, view) => {
         var _a;
         const selection = editor.getSelection();
         if (selection) {
           await this.sendTextToQueue(selection, ((_a = view.file) == null ? void 0 : _a.basename) || "Selection");
         } else {
-          new import_obsidian.Notice("\uD14D\uC2A4\uD2B8\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694");
+          new import_obsidian.Notice(t("notice.selectText"));
         }
       }
     });
     this.addCommand({
       id: "open-notebooklm",
-      name: "NotebookLM \uC5F4\uAE30",
+      name: t("cmd.open"),
       callback: async () => {
         await this.openNotebookLMView();
       }
@@ -86,7 +304,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       this.app.workspace.on("file-menu", (menu, file) => {
         if (file instanceof import_obsidian.TFile && file.extension === "md") {
           menu.addItem((item) => {
-            item.setTitle("NotebookLM\uC5D0 \uC804\uC1A1").setIcon("send").onClick(async () => {
+            item.setTitle(t("menu.send")).setIcon("send").onClick(async () => {
               await this.sendFileToQueue(file);
             });
           });
@@ -98,7 +316,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         const mdFiles = files.filter((f) => f instanceof import_obsidian.TFile && f.extension === "md");
         if (mdFiles.length > 1) {
           menu.addItem((item) => {
-            item.setTitle(`NotebookLM\uC5D0 \uC804\uC1A1 (${mdFiles.length}\uAC1C)`).setIcon("send").onClick(async () => {
+            item.setTitle(t("menu.sendMulti", { count: mdFiles.length })).setIcon("send").onClick(async () => {
               await this.sendFilesToQueue(mdFiles);
             });
           });
@@ -108,14 +326,14 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     this.registerEvent(
       this.app.workspace.on("editor-menu", (menu, editor, view) => {
         menu.addItem((item) => {
-          item.setTitle("NotebookLM\uC5D0 \uC804\uC1A1").setIcon("send").onClick(async () => {
+          item.setTitle(t("menu.send")).setIcon("send").onClick(async () => {
             await this.sendCurrentNoteToQueue();
           });
         });
         const selection = editor.getSelection();
         if (selection) {
           menu.addItem((item) => {
-            item.setTitle("\uC120\uD0DD \uC601\uC5ED\uC744 NotebookLM\uC5D0 \uC804\uC1A1").setIcon("text-select").onClick(async () => {
+            item.setTitle(t("menu.sendSelection")).setIcon("text-select").onClick(async () => {
               var _a;
               await this.sendTextToQueue(selection, ((_a = view.file) == null ? void 0 : _a.basename) || "Selection");
             });
@@ -136,12 +354,11 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   updateStatusBar() {
     const queueSize = this.noteQueue.size;
     if (queueSize > 0) {
-      this.statusBarItem.setText(`\u{1F4CB} Star: ${queueSize}`);
-      this.statusBarItem.setAttribute("title", `Star NotebookLM
-\uB300\uAE30\uC5F4: ${queueSize}\uAC1C`);
+      this.statusBarItem.setText(t("status.queue", { count: queueSize }));
+      this.statusBarItem.setAttribute("title", t("status.queueTooltip", { count: queueSize }));
     } else {
-      this.statusBarItem.setText("\u{1F4D8} Star NLM");
-      this.statusBarItem.setAttribute("title", "Star NotebookLM \uC900\uBE44\uB428");
+      this.statusBarItem.setText(t("status.ready"));
+      this.statusBarItem.setAttribute("title", t("status.readyTooltip"));
     }
   }
   // NotebookLM 웹뷰 열기
@@ -196,7 +413,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       note.metadata = {
         created: file.stat.ctime,
         modified: file.stat.mtime,
-        tags: ((_b = cache == null ? void 0 : cache.tags) == null ? void 0 : _b.map((t) => t.tag)) || []
+        tags: ((_b = cache == null ? void 0 : cache.tags) == null ? void 0 : _b.map((t2) => t2.tag)) || []
       };
     }
     return note;
@@ -204,13 +421,13 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   async sendCurrentNoteToQueue() {
     const note = await this.getCurrentNote();
     if (!note) {
-      new import_obsidian.Notice("\uD65C\uC131 \uB178\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4");
+      new import_obsidian.Notice(t("notice.noActiveNote"));
       return;
     }
     await this.openNotebookLMView();
     const view = this.getNotebookLMView();
     if (view && view.webview) {
-      new import_obsidian.Notice("\uB178\uD2B8\uBD81 \uBAA9\uB85D\uC744 \uAC00\uC838\uC624\uB294 \uC911...");
+      new import_obsidian.Notice(t("notice.fetchingNotebooks"));
       view.webview.loadURL("https://notebooklm.google.com");
       setTimeout(async () => {
         const notebooks = await this.getNotebooksFromWebview();
@@ -263,7 +480,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       await this.openNotebookLMView();
       const nlmView = this.getNotebookLMView();
       if (selectedNotebook) {
-        new import_obsidian.Notice(`"${selectedNotebook.title}" \uB178\uD2B8\uBD81\uC73C\uB85C \uC774\uB3D9 \uC911...`);
+        new import_obsidian.Notice(t("notice.movingToNotebook", { title: selectedNotebook.title }));
         if (nlmView && nlmView.webview) {
           nlmView.webview.loadURL(selectedNotebook.url);
           this.addToQueue(note);
@@ -274,7 +491,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
           this.addToQueue(note);
         }
       } else {
-        new import_obsidian.Notice("NotebookLM\uC5D0\uC11C \uC0C8 \uB178\uD2B8\uBD81\uC744 \uB9CC\uB4E4\uC5B4\uC8FC\uC138\uC694.\n\uB178\uD2B8\uAC00 \uB300\uAE30\uC5F4\uC5D0 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+        new import_obsidian.Notice(t("notice.createNewManual"));
         this.addToQueue(note);
         if (nlmView && nlmView.webview) {
           nlmView.webview.loadURL("https://notebooklm.google.com");
@@ -288,7 +505,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     await this.openNotebookLMView();
     const view = this.getNotebookLMView();
     if (view && view.webview) {
-      new import_obsidian.Notice("\uB178\uD2B8\uBD81 \uBAA9\uB85D\uC744 \uAC00\uC838\uC624\uB294 \uC911...");
+      new import_obsidian.Notice(t("notice.fetchingNotebooks"));
       view.webview.loadURL("https://notebooklm.google.com");
       setTimeout(async () => {
         const notebooks = await this.getNotebooksFromWebview();
@@ -307,7 +524,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     await this.openNotebookLMView();
     const view = this.getNotebookLMView();
     if (view && view.webview) {
-      new import_obsidian.Notice(`${notes.length}\uAC1C \uB178\uD2B8 \uC900\uBE44 \uC911...`);
+      new import_obsidian.Notice(t("notice.preparingNotes", { count: notes.length }));
       view.webview.loadURL("https://notebooklm.google.com");
       setTimeout(async () => {
         const notebooks = await this.getNotebooksFromWebview();
@@ -323,12 +540,12 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       this.app,
       this,
       notebooks,
-      `${notes.length}\uAC1C \uB178\uD2B8`,
+      t("notice.preparingNotes", { count: notes.length }),
       // 제목에 개수 표시
       async (selected) => {
         const view = this.getNotebookLMView();
         if (selected) {
-          new import_obsidian.Notice(`"${selected.title}" \uB178\uD2B8\uBD81\uC73C\uB85C ${notes.length}\uAC1C \uB178\uD2B8 \uC804\uC1A1 \uC911...`);
+          new import_obsidian.Notice(t("notice.sendingNotes", { title: selected.title, count: notes.length }));
           if (view && view.webview) {
             if (selected.url) {
               view.webview.loadURL(selected.url);
@@ -399,7 +616,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
             }, 3e3);
           }
         } else {
-          new import_obsidian.Notice("\uC0C8 \uB178\uD2B8\uBD81 \uC0DD\uC131 \uC911...");
+          new import_obsidian.Notice(t("notice.creatingNotebook"));
           if (view && view.webview) {
             await view.webview.executeJavaScript(`
 							(function() {
@@ -449,7 +666,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     let failed = 0;
     for (let i = 0; i < notes.length; i++) {
       const note = notes[i];
-      new import_obsidian.Notice(`\uCD94\uAC00 \uC911... (${i + 1}/${total}) - ${note.title}`);
+      new import_obsidian.Notice(t("notice.batchProgress", { current: i + 1, total, title: note.title }));
       try {
         await this.addSourceToNotebook(view, note);
         success++;
@@ -462,9 +679,9 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       }
     }
     if (failed === 0) {
-      new import_obsidian.Notice(`\u2705 ${success}\uAC1C \uB178\uD2B8 \uBAA8\uB450 \uCD94\uAC00 \uC644\uB8CC!`);
+      new import_obsidian.Notice(t("notice.batchAllSuccess", { count: success }));
     } else {
-      new import_obsidian.Notice(`\uC644\uB8CC! \uC131\uACF5: ${success}\uAC1C, \uC2E4\uD328: ${failed}\uAC1C`);
+      new import_obsidian.Notice(t("notice.batchPartial", { success, failed }));
     }
   }
   // 웹뷰에서 노트북 목록 가져오기
@@ -474,142 +691,200 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       return [];
     }
     try {
-      const result = await view.webview.executeJavaScript(`
-				(function() {
-					const notebooks = [];
-					const seen = new Set();
-
-					// \uBC29\uBC95 1: project-table\uC5D0\uC11C \uB178\uD2B8\uBD81 \uC81C\uBAA9 \uAC00\uC838\uC624\uAE30 (\uBAA8\uBC14\uC77C/\uC881\uC740 \uD654\uBA74)
-					const table = document.querySelector('table.project-table');
-					if (table) {
-						const rows = table.querySelectorAll('tbody tr, tr');
-						rows.forEach((row, index) => {
-							const titleEl = row.querySelector('.project-table-title, [class*="table-title"]');
-							if (titleEl) {
-								const title = titleEl.textContent.trim();
-								if (title && !seen.has(title)) {
-									seen.add(title);
-									notebooks.push({
-										id: 'row-' + index,
-										title: title,
-										url: '',
-										rowIndex: index,
-										viewType: 'table'
-									});
-								}
-							}
-						});
-					}
-
-					// \uBC29\uBC95 2: PC \uBDF0 \uCE74\uB4DC \uB808\uC774\uC544\uC6C3 - project-button \uC694\uC18C (\uB113\uC740 \uD654\uBA74)
-					if (notebooks.length === 0) {
-						// project-button \uC694\uC18C\uB4E4 \uCC3E\uAE30 (PC \uCE74\uB4DC \uBDF0\uC758 \uBA54\uC778 \uCEE8\uD14C\uC774\uB108)
-						const projectButtons = document.querySelectorAll('project-button.project-button');
-						projectButtons.forEach((btn, index) => {
-							// span.project-button-title\uC5D0\uC11C \uC81C\uBAA9 \uCD94\uCD9C
-							const titleEl = btn.querySelector('span.project-button-title, .project-button-title');
-							if (titleEl) {
-								const title = titleEl.textContent.trim();
-								if (title && !seen.has(title) && !title.includes('\uC0C8 \uB178\uD2B8') && !title.includes('\uB9CC\uB4E4\uAE30')) {
-									seen.add(title);
-									notebooks.push({
-										id: 'projectbtn-' + index,
-										title: title,
-										url: '',
-										cardIndex: index,
-										viewType: 'projectButton'
-									});
-								}
-							}
-						});
-					}
-
-					// \uBC29\uBC95 3: mat-card.project-button-card \uCC3E\uAE30
-					if (notebooks.length === 0) {
-						const matCards = document.querySelectorAll('mat-card.project-button-card');
-						matCards.forEach((card, index) => {
-							const titleEl = card.querySelector('span.project-button-title, .project-button-title');
-							if (titleEl) {
-								const title = titleEl.textContent.trim();
-								if (title && !seen.has(title) && !title.includes('\uC0C8 \uB178\uD2B8') && !title.includes('\uB9CC\uB4E4\uAE30')) {
-									seen.add(title);
-									notebooks.push({
-										id: 'matcard-' + index,
-										title: title,
-										url: '',
-										cardIndex: index,
-										viewType: 'matcard'
-									});
-								}
-							}
-						});
-					}
-
-					// \uBC29\uBC95 4: \uD074\uB9AD \uAC00\uB2A5\uD55C \uB178\uD2B8\uBD81 \uD56D\uBAA9 (href \uD3EC\uD568)
-					if (notebooks.length === 0) {
-						document.querySelectorAll('a[href*="/notebook/"]').forEach(el => {
-							const href = el.getAttribute('href') || '';
-							const match = href.match(/\\/notebook\\/([^/\\?]+)/);
-							if (match && !seen.has(match[1])) {
-								seen.add(match[1]);
-								const title = el.textContent.trim() || 'Untitled notebook';
-								// "\uC0C8 \uB178\uD2B8 \uB9CC\uB4E4\uAE30" \uC81C\uC678
-								if (!title.includes('\uC0C8 \uB178\uD2B8') && !title.includes('\uB9CC\uB4E4\uAE30')) {
-									notebooks.push({
-										id: match[1],
-										title: title,
-										url: 'https://notebooklm.google.com' + href,
-										viewType: 'link'
-									});
-								}
-							}
-						});
-					}
-
-					// \uBC29\uBC95 5: \uC81C\uBAA9 \uD14D\uC2A4\uD2B8 \uAE30\uBC18 \uAC80\uC0C9 (\uCD5C\uD6C4\uC758 \uBC29\uBC95)
-					if (notebooks.length === 0) {
-						// "\uB0B4 \uB178\uD2B8\uBD81" \uC139\uC158 \uCC3E\uAE30
-						const sections = document.querySelectorAll('[class*="section"], [class*="content"], main');
-						sections.forEach(section => {
-							const items = section.querySelectorAll('[role="button"], [role="listitem"], [class*="clickable"]');
-							items.forEach((item, index) => {
-								const text = item.textContent.trim();
-								// \uB0A0\uC9DC \uD328\uD134\uC774 \uD3EC\uD568\uB41C \uD56D\uBAA9\uC740 \uB178\uD2B8\uBD81\uC77C \uAC00\uB2A5\uC131 \uB192\uC74C
-								if (text && text.match(/\\d{4}.*\\d{1,2}.*\\d{1,2}/) && !seen.has(text.substring(0, 50))) {
-									// \uCCAB \uC904\uB9CC \uC81C\uBAA9\uC73C\uB85C \uC0AC\uC6A9
-									const lines = text.split('\\n');
-									const title = lines[0].trim();
-									if (title && !title.includes('\uC0C8 \uB178\uD2B8') && !title.includes('\uB9CC\uB4E4\uAE30')) {
-										seen.add(title);
-										notebooks.push({
-											id: 'item-' + index,
-											title: title,
-											url: '',
-											itemIndex: index,
-											viewType: 'item'
-										});
-									}
-								}
-							});
-						});
-					}
-
-					console.log('[Bridge] Found notebooks:', notebooks, 'View type:', notebooks[0]?.viewType);
-					return notebooks;
-				})();
-			`);
+      const rpcResult = await this.getNotebooksViaRPC(view);
+      if (rpcResult && rpcResult.length > 0) {
+        console.log("[Star NotebookLM] RPC\uB85C \uB178\uD2B8\uBD81 \uBAA9\uB85D \uAC00\uC838\uC634:", rpcResult.length);
+        return rpcResult;
+      }
+    } catch (error) {
+      console.log("[Star NotebookLM] RPC \uB178\uD2B8\uBD81 \uBAA9\uB85D \uC2E4\uD328, DOM \uD3F4\uBC31:", error);
+    }
+    try {
+      const result = await this.getNotebooksViaDOM(view);
       return result || [];
     } catch (error) {
-      console.error("[Star NotebookLM] Failed to get notebooks:", error);
+      console.error("[Star NotebookLM] DOM \uB178\uD2B8\uBD81 \uBAA9\uB85D\uB3C4 \uC2E4\uD328:", error);
       return [];
     }
+  }
+  // wXbhsf RPC로 노트북 목록 가져오기
+  async getNotebooksViaRPC(view) {
+    if (!view.webview)
+      return [];
+    const requestId = "obsidian_list_" + Date.now();
+    await view.webview.executeJavaScript(`
+			(function() {
+				var requestId = "${requestId}";
+				window['__obsidian_result_' + requestId] = { pending: true };
+
+				// AT \uD1A0\uD070 \uCD94\uCD9C
+				var atToken = null;
+				var scripts = document.querySelectorAll('script');
+				for (var i = 0; i < scripts.length; i++) {
+					var text = scripts[i].textContent || '';
+					var match = text.match(/"SNlM0e":"([^"]+)"/);
+					if (match) { atToken = match[1]; break; }
+				}
+				if (!atToken && window.WIZ_global_data && window.WIZ_global_data.SNlM0e) {
+					atToken = window.WIZ_global_data.SNlM0e;
+				}
+
+				if (!atToken) {
+					window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'No AT token' };
+					return;
+				}
+
+				var rpcId = 'wXbhsf';
+				var requestPayload = [null, 1, null, [2]];
+				var requestBody = [[[rpcId, JSON.stringify(requestPayload), null, "generic"]]];
+
+				var formData = new URLSearchParams();
+				formData.append('at', atToken);
+				formData.append('f.req', JSON.stringify(requestBody));
+
+				var xhr = new XMLHttpRequest();
+				xhr.open('POST', '/_/LabsTailwindUi/data/batchexecute?rpcids=' + rpcId, true);
+				xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+				xhr.withCredentials = true;
+
+				xhr.onload = function() {
+					try {
+						var text = xhr.responseText;
+						console.log('[RPC wXbhsf Response]', text.substring(0, 500));
+						if (xhr.status === 200 && text.includes('wrb.fr')) {
+							// batchexecute \uC751\uB2F5 \uD30C\uC2F1
+							var notebooks = [];
+							// ")]}
+" \uC811\uB450\uC0AC \uC81C\uAC70 \uD6C4 \uD30C\uC2F1
+							var lines = text.split('\\n');
+							for (var i = 0; i < lines.length; i++) {
+								try {
+									var parsed = JSON.parse(lines[i]);
+									if (Array.isArray(parsed) && parsed[0] && parsed[0][0] === 'wrb.fr') {
+										var innerData = JSON.parse(parsed[0][2]);
+										// innerData[0]\uC774 \uB178\uD2B8\uBD81 \uBAA9\uB85D \uBC30\uC5F4
+										if (Array.isArray(innerData) && Array.isArray(innerData[0])) {
+											innerData[0].forEach(function(nb) {
+												if (nb && nb[0]) {
+													notebooks.push({
+														id: nb[0],
+														title: (nb[1] || nb[2] || 'Untitled').toString(),
+														url: 'https://notebooklm.google.com/notebook/' + nb[0],
+														viewType: 'rpc'
+													});
+												}
+											});
+										}
+									}
+								} catch(e) {}
+							}
+							window['__obsidian_result_' + requestId] = { success: true, pending: false, notebooks: notebooks };
+						} else {
+							window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'API error: ' + xhr.status };
+						}
+					} catch(e) {
+						window['__obsidian_result_' + requestId] = { success: false, pending: false, error: e.message };
+					}
+				};
+
+				xhr.onerror = function() {
+					window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'Network error' };
+				};
+
+				xhr.send(formData.toString());
+			})();
+		`);
+    let result = null;
+    for (let i = 0; i < 16; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      result = await view.webview.executeJavaScript(`
+				(function() {
+					var r = window['__obsidian_result_${requestId}'];
+					if (r && !r.pending) {
+						delete window['__obsidian_result_${requestId}'];
+						return r;
+					}
+					return null;
+				})();
+			`);
+      if (result)
+        break;
+    }
+    if ((result == null ? void 0 : result.success) && result.notebooks) {
+      return result.notebooks;
+    }
+    return [];
+  }
+  // DOM 스크래핑으로 노트북 목록 가져오기 (폴백)
+  async getNotebooksViaDOM(view) {
+    if (!view.webview)
+      return [];
+    const result = await view.webview.executeJavaScript(`
+			(function() {
+				var notebooks = [];
+				var seen = new Set();
+
+				// \uBC29\uBC95 1: project-table (\uBAA8\uBC14\uC77C/\uC881\uC740 \uD654\uBA74)
+				var table = document.querySelector('table.project-table');
+				if (table) {
+					var rows = table.querySelectorAll('tbody tr, tr');
+					rows.forEach(function(row, index) {
+						var titleEl = row.querySelector('.project-table-title, [class*="table-title"]');
+						if (titleEl) {
+							var title = titleEl.textContent.trim();
+							if (title && !seen.has(title)) {
+								seen.add(title);
+								notebooks.push({ id: 'row-' + index, title: title, url: '', viewType: 'table' });
+							}
+						}
+					});
+				}
+
+				// \uBC29\uBC95 2: project-button \uC694\uC18C (PC \uCE74\uB4DC \uBDF0)
+				if (notebooks.length === 0) {
+					var projectButtons = document.querySelectorAll('project-button.project-button');
+					projectButtons.forEach(function(btn, index) {
+						var titleEl = btn.querySelector('span.project-button-title, .project-button-title');
+						if (titleEl) {
+							var title = titleEl.textContent.trim();
+							if (title && !seen.has(title) && !title.includes('\uC0C8 \uB178\uD2B8') && !title.includes('\uB9CC\uB4E4\uAE30')) {
+								seen.add(title);
+								notebooks.push({ id: 'projectbtn-' + index, title: title, url: '', viewType: 'projectButton' });
+							}
+						}
+					});
+				}
+
+				// \uBC29\uBC95 3: a[href] \uB9C1\uD06C
+				if (notebooks.length === 0) {
+					document.querySelectorAll('a[href*="/notebook/"]').forEach(function(el) {
+						var href = el.getAttribute('href') || '';
+						var match = href.match(/\\/notebook\\/([^/\\?]+)/);
+						if (match && !seen.has(match[1])) {
+							seen.add(match[1]);
+							var title = el.textContent.trim() || 'Untitled notebook';
+							if (!title.includes('\uC0C8 \uB178\uD2B8') && !title.includes('\uB9CC\uB4E4\uAE30')) {
+								notebooks.push({
+									id: match[1], title: title,
+									url: 'https://notebooklm.google.com' + href, viewType: 'link'
+								});
+							}
+						}
+					});
+				}
+
+				console.log('[Bridge DOM] Found notebooks:', notebooks.length);
+				return notebooks;
+			})();
+		`);
+    return result || [];
   }
   // 노트북 선택 모달 표시
   showNotebookModal(note, notebooks) {
     const modal = new NotebookSelectModal(this.app, this, notebooks, note.title, async (selected) => {
       const view = this.getNotebookLMView();
       if (selected) {
-        new import_obsidian.Notice(`"${selected.title}" \uB178\uD2B8\uBD81\uC73C\uB85C \uC774\uB3D9 \uC911...`);
+        new import_obsidian.Notice(t("notice.movingToNotebook", { title: selected.title }));
         if (view && view.webview) {
           if (selected.url) {
             view.webview.loadURL(selected.url);
@@ -686,7 +961,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
           }, 3e3);
         }
       } else {
-        new import_obsidian.Notice("\uC0C8 \uB178\uD2B8\uBD81 \uC0DD\uC131 \uC911...");
+        new import_obsidian.Notice(t("notice.creatingNotebook"));
         if (view && view.webview) {
           await view.webview.executeJavaScript(`
 						(function() {
@@ -741,47 +1016,148 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   async createNewNotebookAndAddSource(view, note) {
     if (!view.webview)
       return;
+    new import_obsidian.Notice(t("notice.creatingNotebookAPI"));
+    try {
+      const notebookTitle = note.title || "Obsidian Notes";
+      const encodedTitle = Buffer.from(notebookTitle, "utf-8").toString("base64");
+      const requestId = "obsidian_create_nb_" + Date.now();
+      await view.webview.executeJavaScript(`
+				(function() {
+					function decodeBase64UTF8(base64) {
+						var binary = atob(base64);
+						var bytes = new Uint8Array(binary.length);
+						for (var i = 0; i < binary.length; i++) {
+							bytes[i] = binary.charCodeAt(i);
+						}
+						return new TextDecoder('utf-8').decode(bytes);
+					}
+
+					var requestId = "${requestId}";
+					var title = decodeBase64UTF8("${encodedTitle}");
+					window['__obsidian_result_' + requestId] = { pending: true };
+
+					// AT \uD1A0\uD070 \uCD94\uCD9C
+					var atToken = null;
+					var scripts = document.querySelectorAll('script');
+					for (var i = 0; i < scripts.length; i++) {
+						var text = scripts[i].textContent || '';
+						var match = text.match(/"SNlM0e":"([^"]+)"/);
+						if (match) { atToken = match[1]; break; }
+					}
+					if (!atToken && window.WIZ_global_data && window.WIZ_global_data.SNlM0e) {
+						atToken = window.WIZ_global_data.SNlM0e;
+					}
+
+					if (!atToken) {
+						window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'No AT token' };
+						return;
+					}
+
+					var rpcId = 'CCqFvf';
+					var requestPayload = [title, null, null, [2], [1]];
+					var requestBody = [[[rpcId, JSON.stringify(requestPayload), null, "generic"]]];
+
+					var formData = new URLSearchParams();
+					formData.append('at', atToken);
+					formData.append('f.req', JSON.stringify(requestBody));
+
+					var xhr = new XMLHttpRequest();
+					xhr.open('POST', '/_/LabsTailwindUi/data/batchexecute?rpcids=' + rpcId, true);
+					xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+					xhr.withCredentials = true;
+
+					xhr.onload = function() {
+						try {
+							var text = xhr.responseText;
+							console.log('[RPC CCqFvf Response]', text.substring(0, 500));
+							if (xhr.status === 200 && text.includes('wrb.fr')) {
+								// \uC751\uB2F5\uC5D0\uC11C \uC0C8 \uB178\uD2B8\uBD81 ID \uCD94\uCD9C
+								var notebookId = null;
+								var lines = text.split('\\n');
+								for (var i = 0; i < lines.length; i++) {
+									try {
+										var parsed = JSON.parse(lines[i]);
+										if (Array.isArray(parsed) && parsed[0] && parsed[0][0] === 'wrb.fr') {
+											var innerData = JSON.parse(parsed[0][2]);
+											if (innerData && innerData[0]) {
+												notebookId = innerData[0];
+											}
+										}
+									} catch(e) {}
+								}
+								window['__obsidian_result_' + requestId] = { success: true, pending: false, notebookId: notebookId };
+							} else {
+								window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'API error: ' + xhr.status };
+							}
+						} catch(e) {
+							window['__obsidian_result_' + requestId] = { success: false, pending: false, error: e.message };
+						}
+					};
+
+					xhr.onerror = function() {
+						window['__obsidian_result_' + requestId] = { success: false, pending: false, error: 'Network error' };
+					};
+
+					xhr.send(formData.toString());
+				})();
+			`);
+      let result = null;
+      for (let i = 0; i < 20; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        result = await view.webview.executeJavaScript(`
+					(function() {
+						var r = window['__obsidian_result_${requestId}'];
+						if (r && !r.pending) {
+							delete window['__obsidian_result_${requestId}'];
+							return r;
+						}
+						return null;
+					})();
+				`);
+        if (result)
+          break;
+      }
+      if ((result == null ? void 0 : result.success) && result.notebookId) {
+        new import_obsidian.Notice(t("notice.notebookCreated", { title: notebookTitle }));
+        view.webview.loadURL("https://notebooklm.google.com/notebook/" + result.notebookId);
+        setTimeout(() => {
+          this.addSourceToNotebook(view, note);
+        }, 3e3);
+      } else {
+        console.log("[Star NotebookLM] \uB178\uD2B8\uBD81 \uC0DD\uC131 RPC \uC2E4\uD328, DOM \uD3F4\uBC31");
+        await this.createNewNotebookViaDOM(view, note);
+      }
+    } catch (error) {
+      console.error("[Star NotebookLM] Create notebook failed:", error);
+      await this.createNewNotebookViaDOM(view, note);
+    }
+  }
+  // DOM 방식 노트북 생성 (폴백)
+  async createNewNotebookViaDOM(view, note) {
+    if (!view.webview)
+      return;
     try {
       await view.webview.executeJavaScript(`
-				(async function() {
-					// "+ \uB9CC\uB4E4\uAE30" \uBC84\uD2BC \uCC3E\uAE30
-					const createBtnSelectors = [
-						'button:has-text("\uB9CC\uB4E4\uAE30")',
-						'button:has-text("Create")',
-						'button[aria-label*="Create"]',
-						'button[aria-label*="\uB9CC\uB4E4\uAE30"]',
-						'[class*="create"] button',
-						'button[class*="create"]'
-					];
-
-					let createBtn = null;
-
-					// \uBC84\uD2BC \uD14D\uC2A4\uD2B8\uB85C \uCC3E\uAE30
-					const allButtons = document.querySelectorAll('button');
-					for (const btn of allButtons) {
-						const text = btn.textContent.toLowerCase();
+				(function() {
+					var allButtons = document.querySelectorAll('button');
+					for (var i = 0; i < allButtons.length; i++) {
+						var text = allButtons[i].textContent.toLowerCase();
 						if (text.includes('\uB9CC\uB4E4\uAE30') || text.includes('create') || text.includes('new')) {
-							createBtn = btn;
-							break;
+							allButtons[i].click();
+							console.log('[Obsidian Bridge] Create button clicked (DOM fallback)');
+							return { success: true };
 						}
 					}
-
-					if (createBtn) {
-						createBtn.click();
-						console.log('[Obsidian Bridge] Create button clicked');
-						return { success: true, action: 'clicked_create' };
-					}
-
 					return { success: false, error: 'Create button not found' };
 				})();
 			`);
-      new import_obsidian.Notice("\uC0C8 \uB178\uD2B8\uBD81\uC774 \uC0DD\uC131\uB418\uBA74 \uC18C\uC2A4\uAC00 \uC790\uB3D9 \uCD94\uAC00\uB429\uB2C8\uB2E4.\n\uC7A0\uC2DC \uAE30\uB2E4\uB824\uC8FC\uC138\uC694...");
+      new import_obsidian.Notice(t("notice.waitingNotebook"));
       setTimeout(() => {
         this.addSourceToNotebook(view, note);
       }, 4e3);
     } catch (error) {
-      console.error("[Star NotebookLM] Create notebook failed:", error);
-      new import_obsidian.Notice("\uC0C8 \uB178\uD2B8\uBD81 \uC0DD\uC131\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC218\uB3D9\uC73C\uB85C \uC0DD\uC131\uD574\uC8FC\uC138\uC694.");
+      console.error("[Star NotebookLM] DOM Create notebook failed:", error);
+      new import_obsidian.Notice(t("notice.notebookCreateFailed"));
       this.addToQueue(note);
     }
   }
@@ -812,7 +1188,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       return;
     const title = note.title;
     const content = note.content;
-    new import_obsidian.Notice(`"${title}" \uD14D\uC2A4\uD2B8 \uC18C\uC2A4 API\uB85C \uCD94\uAC00 \uC911...`);
+    new import_obsidian.Notice(t("notice.addingTextSource", { title }));
     try {
       const pageInfo = await view.webview.executeJavaScript(`
 				(function() {
@@ -838,12 +1214,12 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 			`);
       console.log("[Star NotebookLM] Page info:", pageInfo);
       if (!pageInfo.notebookId) {
-        new import_obsidian.Notice("\uB178\uD2B8\uBD81\uC744 \uBA3C\uC800 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+        new import_obsidian.Notice(t("notice.selectNotebookFirst"));
         await this.addSourceViaDOM(view, note);
         return;
       }
       if (!pageInfo.atToken) {
-        new import_obsidian.Notice("\uC778\uC99D \uD1A0\uD070\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. DOM \uBC29\uC2DD\uC73C\uB85C \uC804\uD658...");
+        new import_obsidian.Notice(t("notice.noAuthToken"));
         await this.addSourceViaDOM(view, note);
         return;
       }
@@ -872,17 +1248,24 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 
 					var rpcId = 'izAoDd';
 
-					// nlm-py\uC5D0\uC11C \uAC80\uC99D\uB41C \uD14D\uC2A4\uD2B8 \uC18C\uC2A4 \uD398\uC774\uB85C\uB4DC
+					// nlm-py v0.3.4 \uAC80\uC99D \uD14D\uC2A4\uD2B8 \uC18C\uC2A4 \uD398\uC774\uB85C\uB4DC
 					var requestPayload = [
 						[
 							[
 								null,
 								[title, content],
 								null,
-								2
+								null,
+								null,
+								null,
+								null,
+								null
 							]
 						],
-						notebookId
+						notebookId,
+						[2],
+						null,
+						null
 					];
 
 					var requestBody = [[[rpcId, JSON.stringify(requestPayload), null, "generic"]]];
@@ -931,15 +1314,15 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       }
       console.log("[Star NotebookLM] Text API result:", result);
       if (result == null ? void 0 : result.success) {
-        new import_obsidian.Notice(`\u2705 "${title}" \uD14D\uC2A4\uD2B8 \uC18C\uC2A4 \uCD94\uAC00 \uC644\uB8CC!`);
+        new import_obsidian.Notice(t("notice.textSourceAdded", { title }));
       } else {
         console.log("[Star NotebookLM] Text API failed, falling back to DOM");
-        new import_obsidian.Notice("API \uC2E4\uD328. DOM \uBC29\uC2DD\uC73C\uB85C \uC7AC\uC2DC\uB3C4...");
+        new import_obsidian.Notice(t("notice.apiFailed"));
         await this.addSourceViaDOM(view, note);
       }
     } catch (error) {
       console.error("[Star NotebookLM] Text API failed:", error);
-      new import_obsidian.Notice("API \uC2E4\uD328. DOM \uBC29\uC2DD\uC73C\uB85C \uC7AC\uC2DC\uB3C4...");
+      new import_obsidian.Notice(t("notice.apiFailed"));
       await this.addSourceViaDOM(view, note);
     }
   }
@@ -947,7 +1330,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   async addUrlSourceViaAPI(view, note) {
     if (!view.webview || !note.shareLink)
       return;
-    new import_obsidian.Notice(`"${note.title}" URL \uC18C\uC2A4 API\uB85C \uCD94\uAC00 \uC911...`);
+    new import_obsidian.Notice(t("notice.addingUrlSource", { title: note.title }));
     try {
       const pageInfo = await view.webview.executeJavaScript(`
 				(function() {
@@ -973,11 +1356,11 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 			`);
       console.log("[Star NotebookLM] Page info:", pageInfo);
       if (!pageInfo.notebookId) {
-        new import_obsidian.Notice("\uB178\uD2B8\uBD81\uC744 \uBA3C\uC800 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+        new import_obsidian.Notice(t("notice.selectNotebookFirst"));
         return;
       }
       if (!pageInfo.atToken) {
-        new import_obsidian.Notice("\uC778\uC99D \uD1A0\uD070\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. DOM \uBC29\uC2DD\uC73C\uB85C \uC804\uD658...");
+        new import_obsidian.Notice(t("notice.noAuthToken"));
         await this.addLinkSourceToNotebook(view, note);
         return;
       }
@@ -1045,14 +1428,14 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       }
       console.log("[Star NotebookLM] URL API result:", result);
       if (result == null ? void 0 : result.success) {
-        new import_obsidian.Notice(`\u2705 "${note.title}" URL \uC18C\uC2A4 \uCD94\uAC00 \uC644\uB8CC!`);
+        new import_obsidian.Notice(t("notice.urlSourceAdded", { title: note.title }));
       } else {
-        new import_obsidian.Notice("API \uC2E4\uD328. DOM \uBC29\uC2DD\uC73C\uB85C \uC7AC\uC2DC\uB3C4...");
+        new import_obsidian.Notice(t("notice.apiFailed"));
         await this.addLinkSourceToNotebook(view, note);
       }
     } catch (error) {
       console.error("[Star NotebookLM] URL API failed:", error);
-      new import_obsidian.Notice("API \uC2E4\uD328. DOM \uBC29\uC2DD\uC73C\uB85C \uC7AC\uC2DC\uB3C4...");
+      new import_obsidian.Notice(t("notice.apiFailed"));
       await this.addLinkSourceToNotebook(view, note);
     }
   }
@@ -1061,7 +1444,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     if (!view.webview)
       return;
     const content = "# " + note.title + "\n\n" + note.content;
-    new import_obsidian.Notice(`"${note.title}" DOM \uBC29\uC2DD\uC73C\uB85C \uC18C\uC2A4 \uCD94\uAC00 \uC911...`);
+    new import_obsidian.Notice(t("notice.addingDomSource", { title: note.title }));
     try {
       await view.webview.executeJavaScript(`
 				(function() {
@@ -1294,25 +1677,20 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 			`);
       console.log("[Star NotebookLM] Step 4 (\uC0BD\uC785 \uBC84\uD2BC):", step4);
       if ((step3 == null ? void 0 : step3.success) && (step4 == null ? void 0 : step4.success)) {
-        new import_obsidian.Notice(`\u2705 "${note.title}" \uC18C\uC2A4\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4!`, 5e3);
+        new import_obsidian.Notice(t("notice.sourceAdded", { title: note.title }), 5e3);
       } else if (step3 == null ? void 0 : step3.success) {
-        new import_obsidian.Notice(`\u{1F4DD} \uD14D\uC2A4\uD2B8 \uC785\uB825 \uC644\uB8CC!
-"\uC0BD\uC785" \uBC84\uD2BC\uC744 \uD074\uB9AD\uD574\uC8FC\uC138\uC694.`, 5e3);
+        new import_obsidian.Notice(t("notice.manualInsert"), 5e3);
       } else {
         await navigator.clipboard.writeText(content);
-        new import_obsidian.Notice(`\u{1F4CB} \uC790\uB3D9 \uC785\uB825 \uC2E4\uD328. \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.
-
-Cmd+V\uB85C \uBD99\uC5EC\uB123\uAE30 \uD6C4 \uC0BD\uC785 \uD074\uB9AD`, 8e3);
+        new import_obsidian.Notice(t("notice.clipboardFallback"), 8e3);
       }
     } catch (error) {
       console.error("[Star NotebookLM] Auto add source failed:", error);
       try {
         await navigator.clipboard.writeText(content);
-        new import_obsidian.Notice(`\u{1F4CB} "${note.title}" \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.
-
-\uC218\uB3D9\uC73C\uB85C \uBD99\uC5EC\uB123\uAE30 \uD574\uC8FC\uC138\uC694.`, 8e3);
+        new import_obsidian.Notice(t("notice.clipboardCopied", { title: note.title }), 8e3);
       } catch (e) {
-        new import_obsidian.Notice("\uC18C\uC2A4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", 5e3);
+        new import_obsidian.Notice(t("notice.sourceAddFailed"), 5e3);
       }
     }
   }
@@ -1477,26 +1855,20 @@ Cmd+V\uB85C \uBD99\uC5EC\uB123\uAE30 \uD6C4 \uC0BD\uC785 \uD074\uB9AD`, 8e3);
 			`);
       console.log("[Star NotebookLM] Link Step 5 (\uC0BD\uC785 \uBC84\uD2BC):", step5);
       if ((step4 == null ? void 0 : step4.success) && (step5 == null ? void 0 : step5.success)) {
-        new import_obsidian.Notice(`\u2705 "${note.title}" \uB9C1\uD06C \uC18C\uC2A4\uAC00 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4!
-(${note.shareLink})`, 5e3);
+        new import_obsidian.Notice(t("notice.linkSourceAdded", { title: note.title, link: note.shareLink }), 5e3);
       } else if (step4 == null ? void 0 : step4.success) {
-        new import_obsidian.Notice(`\u{1F4DD} URL \uC785\uB825 \uC644\uB8CC!
-"\uC0BD\uC785" \uBC84\uD2BC\uC744 \uD074\uB9AD\uD574\uC8FC\uC138\uC694.`, 5e3);
+        new import_obsidian.Notice(t("notice.manualUrlInsert"), 5e3);
       } else {
         await navigator.clipboard.writeText(note.shareLink);
-        new import_obsidian.Notice(`\u{1F4CB} \uC790\uB3D9 \uC785\uB825 \uC2E4\uD328. URL\uC774 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.
-
-${note.shareLink}`, 8e3);
+        new import_obsidian.Notice(t("notice.urlClipboardFallback", { link: note.shareLink }), 8e3);
       }
     } catch (error) {
       console.error("[Star NotebookLM] Link source add failed:", error);
       try {
         await navigator.clipboard.writeText(note.shareLink);
-        new import_obsidian.Notice(`\u{1F4CB} "${note.title}" URL\uC774 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB428.
-
-\uC218\uB3D9\uC73C\uB85C \uBD99\uC5EC\uB123\uAE30 \uD574\uC8FC\uC138\uC694.`, 8e3);
+        new import_obsidian.Notice(t("notice.urlClipboardCopied", { title: note.title }), 8e3);
       } catch (e) {
-        new import_obsidian.Notice("\uB9C1\uD06C \uC18C\uC2A4 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", 5e3);
+        new import_obsidian.Notice(t("notice.linkAddFailed"), 5e3);
       }
     }
   }
@@ -1507,10 +1879,10 @@ ${note.shareLink}`, 8e3);
   async debugWebviewDOM() {
     const view = this.getNotebookLMView();
     if (!view || !view.webview) {
-      new import_obsidian.Notice("NotebookLM \uC6F9\uBDF0\uAC00 \uC5F4\uB824\uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.\n\uBA3C\uC800 NotebookLM\uC744 \uC5F4\uC5B4\uC8FC\uC138\uC694.");
+      new import_obsidian.Notice(t("notice.webviewNotOpen"));
       return;
     }
-    new import_obsidian.Notice("DOM \uC815\uBCF4 \uC218\uC9D1 \uC911...");
+    new import_obsidian.Notice(t("notice.collectingDom"));
     try {
       const domInfo = await view.webview.executeJavaScript(`
 				(function() {
@@ -1624,16 +1996,11 @@ ${note.shareLink}`, 8e3);
       const debugContent = JSON.stringify(domInfo, null, 2);
       const debugPath = "notebooklm-debug.json";
       await this.app.vault.adapter.write(debugPath, debugContent);
-      new import_obsidian.Notice(`DOM \uC815\uBCF4\uAC00 ${debugPath}\uC5D0 \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.
-
-\uBC84\uD2BC ${domInfo.buttons.length}\uAC1C
-\uB178\uD2B8\uBD81 \uB9C1\uD06C ${domInfo.notebookLinks.length}\uAC1C
-\uC785\uB825\uD544\uB4DC ${domInfo.textInputs.length}\uAC1C
-\uB2E4\uC774\uC5BC\uB85C\uADF8 ${domInfo.dialogs.length}\uAC1C`, 8e3);
+      new import_obsidian.Notice(t("notice.domSaved", { path: debugPath, buttons: domInfo.buttons.length, links: domInfo.notebookLinks.length, inputs: domInfo.textInputs.length, dialogs: domInfo.dialogs.length }), 8e3);
       console.log("[Star NotebookLM] DOM Info:", domInfo);
     } catch (error) {
       console.error("[Star NotebookLM] Debug failed:", error);
-      new import_obsidian.Notice("DOM \uC815\uBCF4 \uC218\uC9D1 \uC2E4\uD328: " + error.message);
+      new import_obsidian.Notice(t("notice.domFailed", { error: error.message }));
     }
   }
   async sendTextToQueue(text, title) {
@@ -1645,7 +2012,7 @@ ${note.shareLink}`, 8e3);
     await this.openNotebookLMView();
     const view = this.getNotebookLMView();
     if (view && view.webview) {
-      new import_obsidian.Notice("\uB178\uD2B8\uBD81 \uBAA9\uB85D\uC744 \uAC00\uC838\uC624\uB294 \uC911...");
+      new import_obsidian.Notice(t("notice.fetchingNotebooks"));
       view.webview.loadURL("https://notebooklm.google.com");
       setTimeout(async () => {
         const notebooks = await this.getNotebooksFromWebview();
@@ -1677,7 +2044,7 @@ var NotebookLMView = class extends import_obsidian.ItemView {
     return NOTEBOOKLM_VIEW_TYPE;
   }
   getDisplayText() {
-    return "NotebookLM";
+    return t("view.displayText");
   }
   getIcon() {
     return "book-open";
@@ -1687,9 +2054,9 @@ var NotebookLMView = class extends import_obsidian.ItemView {
     container.empty();
     container.addClass("notebooklm-view-container");
     const toolbar = container.createDiv("notebooklm-toolbar");
-    const refreshBtn = toolbar.createEl("button", { text: "\u{1F504} \uC0C8\uB85C\uACE0\uCE68" });
+    const refreshBtn = toolbar.createEl("button", { text: t("view.refresh") });
     refreshBtn.onclick = () => this.refresh();
-    const listBtn = toolbar.createEl("button", { text: "\u{1F4DA} \uB178\uD2B8\uBD81 \uBAA9\uB85D" });
+    const listBtn = toolbar.createEl("button", { text: t("view.notebookList") });
     listBtn.onclick = () => this.goToNotebookList();
     this.webviewEl = container.createDiv("notebooklm-webview-container");
     const webviewHtml = `<webview
@@ -1941,15 +2308,15 @@ var NotebookLMView = class extends import_obsidian.ItemView {
     var _a;
     const pendingNotes = Array.from(this.plugin.noteQueue.entries()).filter(([, item2]) => item2.status === "pending");
     if (pendingNotes.length === 0) {
-      new import_obsidian.Notice("\uB300\uAE30\uC5F4\uC774 \uBE44\uC5B4\uC788\uC2B5\uB2C8\uB2E4");
+      new import_obsidian.Notice(t("notice.emptyQueue"));
       return;
     }
     if (!((_a = this.plugin.currentPageState) == null ? void 0 : _a.isInsideNotebook)) {
-      new import_obsidian.Notice("\uBA3C\uC800 \uB178\uD2B8\uBD81\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694");
+      new import_obsidian.Notice(t("notice.selectNotebook"));
       return;
     }
     const [id, item] = pendingNotes[0];
-    new import_obsidian.Notice(`"${item.note.title}" \uCD94\uAC00 \uC911...`);
+    new import_obsidian.Notice(t("notice.addingFromQueue", { title: item.note.title }));
     this.sendToWebview("addSource", {
       title: item.note.title,
       content: item.note.content
@@ -1957,7 +2324,7 @@ var NotebookLMView = class extends import_obsidian.ItemView {
     setTimeout(() => {
       this.plugin.noteQueue.delete(id);
       this.plugin.updateStatusBar();
-      new import_obsidian.Notice(`"${item.note.title}" \uCD94\uAC00 \uC644\uB8CC!`);
+      new import_obsidian.Notice(t("notice.addedFromQueue", { title: item.note.title }));
     }, 2e3);
   }
 };
@@ -1970,22 +2337,44 @@ var NotebookSelectModal = class extends import_obsidian.Modal {
     this.onSelect = onSelect;
   }
   onOpen() {
+    this.renderContent();
+  }
+  renderContent() {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("notebooklm-select-modal");
-    contentEl.createEl("h2", { text: "\u{1F4DA} \uB178\uD2B8\uBD81 \uC120\uD0DD" });
+    const headerDiv = contentEl.createDiv("modal-header-row");
+    headerDiv.style.display = "flex";
+    headerDiv.style.justifyContent = "space-between";
+    headerDiv.style.alignItems = "center";
+    headerDiv.createEl("h2", { text: t("modal.selectNotebook") });
+    const refreshBtn = headerDiv.createEl("button", { text: t("modal.refresh"), cls: "mod-cta" });
+    refreshBtn.style.fontSize = "12px";
+    refreshBtn.style.padding = "4px 12px";
+    refreshBtn.onclick = async () => {
+      refreshBtn.textContent = t("modal.loading");
+      refreshBtn.disabled = true;
+      try {
+        this.notebooks = await this.plugin.getNotebooksFromWebview();
+        this.renderContent();
+      } catch (e) {
+        refreshBtn.textContent = t("modal.refresh");
+        refreshBtn.disabled = false;
+        new import_obsidian.Notice(t("notice.refreshFailed"));
+      }
+    };
     contentEl.createEl("p", {
-      text: `"${this.noteTitle}" \uB178\uD2B8\uB97C \uC5B4\uB514\uC5D0 \uCD94\uAC00\uD560\uAE4C\uC694?`,
+      text: t("modal.whereToAdd", { title: this.noteTitle }),
       cls: "modal-description"
     });
     const newSection = contentEl.createDiv("modal-section");
-    newSection.createEl("h3", { text: "\uC0C8 \uB178\uD2B8\uBD81" });
+    newSection.createEl("h3", { text: t("modal.newNotebook") });
     const newItem = newSection.createDiv("notebook-item new");
     newItem.innerHTML = `
-			<span class="notebook-icon">\u2795</span>
+			<span class="notebook-icon">+</span>
 			<div class="notebook-info">
-				<span class="notebook-title">\uC0C8 \uB178\uD2B8\uBD81 \uB9CC\uB4E4\uAE30</span>
-				<span class="notebook-desc">NotebookLM\uC5D0\uC11C \uC0C8 \uB178\uD2B8\uBD81\uC744 \uC0DD\uC131\uD569\uB2C8\uB2E4</span>
+				<span class="notebook-title">${t("modal.createNew")}</span>
+				<span class="notebook-desc">${t("modal.createNewDesc")}</span>
 			</div>
 		`;
     newItem.onclick = () => {
@@ -1994,7 +2383,7 @@ var NotebookSelectModal = class extends import_obsidian.Modal {
     };
     if (this.notebooks.length > 0) {
       const existingSection = contentEl.createDiv("modal-section");
-      existingSection.createEl("h3", { text: `\uAE30\uC874 \uB178\uD2B8\uBD81 (${this.notebooks.length}\uAC1C)` });
+      existingSection.createEl("h3", { text: t("modal.existingNotebooks", { count: this.notebooks.length }) });
       const list = existingSection.createDiv("notebook-list");
       this.notebooks.forEach((notebook) => {
         const item = list.createDiv("notebook-item");
@@ -2012,12 +2401,12 @@ var NotebookSelectModal = class extends import_obsidian.Modal {
     } else {
       const emptyMsg = contentEl.createDiv("empty-message");
       emptyMsg.innerHTML = `
-				<p>\u26A0\uFE0F \uAE30\uC874 \uB178\uD2B8\uBD81\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.</p>
-				<p class="hint">NotebookLM \uC6F9\uBDF0\uC5D0\uC11C \uB178\uD2B8\uBD81 \uBAA9\uB85D \uD398\uC774\uC9C0\uB85C \uC774\uB3D9\uD55C \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.</p>
+				<p>${t("modal.noNotebooks")}</p>
+				<p class="hint">${t("modal.noNotebooksHint")}</p>
 			`;
     }
     const footer = contentEl.createDiv("modal-footer");
-    const cancelBtn = footer.createEl("button", { text: "\uCDE8\uC18C" });
+    const cancelBtn = footer.createEl("button", { text: t("modal.cancel") });
     cancelBtn.onclick = () => this.close();
   }
   onClose() {
@@ -2033,48 +2422,54 @@ var StarNotebookLMSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Star NotebookLM \uC124\uC815" });
-    new import_obsidian.Setting(containerEl).setName("\uBA54\uD0C0\uB370\uC774\uD130 \uD3EC\uD568").setDesc("\uB178\uD2B8 \uC804\uC1A1 \uC2DC \uC0DD\uC131/\uC218\uC815 \uC2DC\uAC04, \uD0DC\uADF8 \uB4F1 \uBA54\uD0C0\uB370\uC774\uD130 \uD3EC\uD568").addToggle((toggle) => toggle.setValue(this.plugin.settings.includeMetadata).onChange(async (value) => {
+    containerEl.createEl("h2", { text: t("settings.title") });
+    new import_obsidian.Setting(containerEl).setName(t("settings.language")).setDesc(t("settings.languageDesc")).addDropdown((dropdown) => dropdown.addOption("auto", t("settings.langAuto")).addOption("ko", t("settings.langKo")).addOption("en", t("settings.langEn")).setValue(this.plugin.settings.language).onChange(async (value) => {
+      this.plugin.settings.language = value;
+      currentLang = getLanguage(this.plugin.settings.language);
+      await this.plugin.saveSettings();
+      this.display();
+    }));
+    new import_obsidian.Setting(containerEl).setName(t("settings.includeMetadata")).setDesc(t("settings.includeMetadataDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.includeMetadata).onChange(async (value) => {
       this.plugin.settings.includeMetadata = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian.Setting(containerEl).setName("Frontmatter \uD3EC\uD568").setDesc("\uB178\uD2B8 \uC804\uC1A1 \uC2DC YAML frontmatter \uD3EC\uD568").addToggle((toggle) => toggle.setValue(this.plugin.settings.includeFrontmatter).onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setName(t("settings.includeFrontmatter")).setDesc(t("settings.includeFrontmatterDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.includeFrontmatter).onChange(async (value) => {
       this.plugin.settings.includeFrontmatter = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian.Setting(containerEl).setName("\uC18C\uC2A4 \uCD94\uAC00 \uBC29\uC2DD").setDesc("NotebookLM\uC5D0 \uC18C\uC2A4\uB97C \uCD94\uAC00\uD558\uB294 \uBC29\uC2DD\uC744 \uC120\uD0DD\uD569\uB2C8\uB2E4").addDropdown((dropdown) => dropdown.addOption("api", "API \uC9C1\uC811 \uD638\uCD9C (\uBE60\uB984, \uAD8C\uC7A5)").addOption("dom", "DOM \uC870\uC791 (\uC548\uC815\uC801)").setValue(this.plugin.settings.sourceAddMethod).onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setName(t("settings.sourceMethod")).setDesc(t("settings.sourceMethodDesc")).addDropdown((dropdown) => dropdown.addOption("api", t("settings.sourceApi")).addOption("dom", t("settings.sourceDom")).setValue(this.plugin.settings.sourceAddMethod).onChange(async (value) => {
       this.plugin.settings.sourceAddMethod = value;
       await this.plugin.saveSettings();
     }));
-    containerEl.createEl("h3", { text: "\uC0AC\uC6A9\uBC95" });
+    containerEl.createEl("h3", { text: t("settings.usage") });
     const usageList = containerEl.createEl("div");
     usageList.style.marginLeft = "8px";
     usageList.createEl("p", {
-      text: "1. \uC67C\uCABD \uB9AC\uBCF8\uC758 \uCC45 \uC544\uC774\uCF58(book-open)\uC744 \uD074\uB9AD\uD558\uC5EC NotebookLM \uD328\uB110\uC744 \uC5FD\uB2C8\uB2E4."
+      text: t("settings.usage1")
     });
     usageList.createEl("p", {
-      text: "2. NotebookLM \uD328\uB110\uC5D0\uC11C Google \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778\uD569\uB2C8\uB2E4."
+      text: t("settings.usage2")
     });
     usageList.createEl("p", {
-      text: "3. \uB178\uD2B8\uB97C \uC804\uC1A1\uD558\uB294 \uBC29\uBC95:"
+      text: t("settings.usage3")
     });
     const methodList = usageList.createEl("ul");
     methodList.style.marginLeft = "16px";
     methodList.style.marginTop = "4px";
     methodList.createEl("li", {
-      text: "\uB9AC\uBCF8\uC758 \uC804\uC1A1 \uC544\uC774\uCF58(send) \uD074\uB9AD"
+      text: t("settings.usageMethod1")
     });
     methodList.createEl("li", {
-      text: '\uD30C\uC77C \uD0D0\uC0C9\uAE30\uC5D0\uC11C \uB178\uD2B8 \uC6B0\uD074\uB9AD \u2192 "NotebookLM\uC5D0 \uC804\uC1A1"'
+      text: t("settings.usageMethod2")
     });
     methodList.createEl("li", {
-      text: '\uC5D0\uB514\uD130\uC5D0\uC11C \uC6B0\uD074\uB9AD \u2192 "NotebookLM\uC5D0 \uC804\uC1A1" (\uC804\uCCB4 \uB178\uD2B8)'
+      text: t("settings.usageMethod3")
     });
     methodList.createEl("li", {
-      text: '\uD14D\uC2A4\uD2B8 \uC120\uD0DD \uD6C4 \uC6B0\uD074\uB9AD \u2192 "\uC120\uD0DD \uC601\uC5ED\uC744 NotebookLM\uC5D0 \uC804\uC1A1"'
+      text: t("settings.usageMethod4")
     });
     usageList.createEl("p", {
-      text: "4. \uB178\uD2B8\uBD81 \uC120\uD0DD \uBAA8\uB2EC\uC5D0\uC11C \uAE30\uC874 \uB178\uD2B8\uBD81\uC744 \uC120\uD0DD\uD558\uAC70\uB098 \uC0C8\uB85C \uB9CC\uB4ED\uB2C8\uB2E4."
+      text: t("settings.usage4")
     });
   }
 };
