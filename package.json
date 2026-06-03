@@ -1,7 +1,7 @@
 {
   "name": "star-notebooklm",
-  "version": "1.2.1",
-  "description": "Send Obsidian notes directly to Google NotebookLM as sources from an embedded NotebookLM view.",
+  "version": "1.2.2",
+  "description": "Send notes directly to Google NotebookLM as sources from an embedded NotebookLM view.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
