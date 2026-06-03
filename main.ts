@@ -2315,6 +2315,7 @@ class NotebookLMView extends ItemView {
 		// Electron webview 생성
 		const webviewHtml = `<webview
 			id="notebooklm-webview"
+			class="notebooklm-webview"
 			src="https://notebooklm.google.com"
 			style="width: 100%; height: 100%;"
 			allowpopups

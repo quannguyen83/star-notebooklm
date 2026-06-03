@@ -2010,6 +2010,7 @@ var NotebookLMView = class extends import_obsidian.ItemView {
     this.webviewEl = container.createDiv("notebooklm-webview-container");
     const webviewHtml = `<webview
 			id="notebooklm-webview"
+			class="notebooklm-webview"
 			src="https://notebooklm.google.com"
 			style="width: 100%; height: 100%;"
 			allowpopups
