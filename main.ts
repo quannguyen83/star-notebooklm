@@ -521,7 +521,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 			// 페이지 로드 대기 후 노트북 목록 가져오고 모달 표시
 			setTimeout(async () => {
 				const notebooks = await this.getNotebooksFromWebview();
-				console.log('[Star NotebookLM] Found notebooks:', notebooks);
 				this.showNotebookModal(note, notebooks);
 			}, 3000);
 		} else {
@@ -532,7 +531,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 	// 노트북 선택 모달 표시
 	async showNotebookSelectModal(note: NoteData) {
-		console.log('[Star NotebookLM] 모달 표시 시작');
 
 		// 웹뷰에서 노트북 목록 가져오기 시도
 		let notebooks: NotebookInfo[] = [];
@@ -565,13 +563,11 @@ export default class StarNotebookLMPlugin extends Plugin {
 					})();
 				`);
 				notebooks = result || [];
-				console.log('[Star NotebookLM] 노트북 목록:', notebooks);
 			} catch (error) {
 				console.error('[Star NotebookLM] 노트북 목록 가져오기 실패:', error);
 			}
 		}
 
-		console.log('[Star NotebookLM] 모달 생성');
 
 		// 모달 표시
 		const modal = new NotebookSelectModal(this.app, this, notebooks, note.title, async (selectedNotebook) => {
@@ -627,7 +623,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 			// 페이지 로드 대기 후 노트북 목록 가져오기
 			setTimeout(async () => {
 				const notebooks = await this.getNotebooksFromWebview();
-				console.log('[Star NotebookLM] Found notebooks:', notebooks);
 				this.showNotebookModal(note, notebooks);
 			}, 3000);
 		} else {
@@ -843,11 +838,9 @@ export default class StarNotebookLMPlugin extends Plugin {
 		try {
 			const rpcResult = await this.getNotebooksViaRPC(view);
 			if (rpcResult && rpcResult.length > 0) {
-				console.log('[Star NotebookLM] RPC로 노트북 목록 가져옴:', rpcResult.length);
 				return rpcResult;
 			}
 		} catch (error) {
-			console.log('[Star NotebookLM] RPC 노트북 목록 실패, DOM 폴백:', error);
 		}
 
 		// RPC 실패 시 DOM 폴백
@@ -904,7 +897,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 				xhr.onload = function() {
 					try {
 						var text = xhr.responseText;
-						console.log('[RPC wXbhsf Response]', text.substring(0, 500));
 						if (xhr.status === 200 && text.includes('wrb.fr')) {
 							// batchexecute 응답 파싱
 							var notebooks = [];
@@ -1029,7 +1021,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					});
 				}
 
-				console.log('[Bridge DOM] Found notebooks:', notebooks.length);
 				return notebooks;
 			})();
 		`);
@@ -1064,7 +1055,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 											const row = el.closest('tr');
 											if (row) {
 												row.click();
-												console.log('[Bridge] Clicked table row for:', title);
 												return { success: true, method: 'table' };
 											}
 										}
@@ -1080,7 +1070,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 											// mat-card 또는 primary-action-button 클릭
 											const clickTarget = btn.querySelector('.primary-action-button, mat-card.project-button-card') || btn;
 											clickTarget.click();
-											console.log('[Bridge] Clicked project-button for:', title);
 											return { success: true, method: 'projectButton' };
 										}
 									}
@@ -1094,7 +1083,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 										if (titleEl && titleEl.textContent.trim() === title) {
 											const clickTarget = card.querySelector('.primary-action-button') || card;
 											clickTarget.click();
-											console.log('[Bridge] Clicked mat-card for:', title);
 											return { success: true, method: 'matcard' };
 										}
 									}
@@ -1109,7 +1097,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 										// 클릭 가능한 부모 찾기
 										const clickable = el.closest('[role="button"], a, button, [class*="card"], [class*="item"], tr') || el;
 										clickable.click();
-										console.log('[Bridge] Clicked element for:', title, clickable.tagName);
 										return { success: true, method: 'fallback' };
 									}
 								}
@@ -1137,7 +1124,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 								const text = (btn.textContent || '').toLowerCase();
 								if (text.includes('만들기') || text.includes('create')) {
 									btn.click();
-									console.log('[Bridge] Clicked create notebook button');
 									return true;
 								}
 							}
@@ -1156,7 +1142,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 								for (const btn of closeButtons) {
 									if (btn.offsetParent !== null) {
 										btn.click();
-										console.log('[Bridge] Closed dialog via close button');
 										return { success: true, method: 'closeButton' };
 									}
 								}
@@ -1165,13 +1150,11 @@ export default class StarNotebookLMPlugin extends Plugin {
 								const backdrop = document.querySelector('.cdk-overlay-backdrop, .mat-mdc-dialog-container + .cdk-overlay-backdrop');
 								if (backdrop) {
 									backdrop.click();
-									console.log('[Bridge] Closed dialog via backdrop');
 									return { success: true, method: 'backdrop' };
 								}
 
 								// 방법 3: Escape 키 전송
 								document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
-								console.log('[Bridge] Sent Escape key');
 								return { success: true, method: 'escape' };
 							})();
 						`);
@@ -1246,7 +1229,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					xhr.onload = function() {
 						try {
 							var text = xhr.responseText;
-							console.log('[RPC CCqFvf Response]', text.substring(0, 500));
 							if (xhr.status === 200 && text.includes('wrb.fr')) {
 								// 응답에서 새 노트북 ID 추출
 								var notebookId = null;
@@ -1305,7 +1287,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 				}, 3000);
 			} else {
 				// RPC 실패 시 DOM 폴백
-				console.log('[Star NotebookLM] 노트북 생성 RPC 실패, DOM 폴백');
 				await this.createNewNotebookViaDOM(view, note);
 			}
 
@@ -1327,7 +1308,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						var text = allButtons[i].textContent.toLowerCase();
 						if (text.includes('만들기') || text.includes('create') || text.includes('new')) {
 							allButtons[i].click();
-							console.log('[Obsidian Bridge] Create button clicked (DOM fallback)');
 							return { success: true };
 						}
 					}
@@ -1409,7 +1389,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 				})();
 			`);
 
-			console.log('[Star NotebookLM] Page info:', pageInfo);
 
 			if (!pageInfo.notebookId) {
 				new Notice(t('notice.selectNotebookFirst'));
@@ -1485,7 +1464,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 					xhr.onload = function() {
 						var text = xhr.responseText;
-						console.log('[API Response]', text.substring(0, 300));
 						if (xhr.status === 200 && text.includes('wrb.fr')) {
 							window['__obsidian_result_' + requestId] = { success: true, pending: false };
 						} else {
@@ -1518,12 +1496,10 @@ export default class StarNotebookLMPlugin extends Plugin {
 				if (result) break;
 			}
 
-			console.log('[Star NotebookLM] Text API result:', result);
 
 			if (result?.success) {
 				new Notice(t('notice.textSourceAdded', { title }));
 			} else {
-				console.log('[Star NotebookLM] Text API failed, falling back to DOM');
 				new Notice(t('notice.apiFailed'));
 				await this.addSourceViaDOM(view, note);
 			}
@@ -1566,7 +1542,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 				})();
 			`);
 
-			console.log('[Star NotebookLM] Page info:', pageInfo);
 
 			if (!pageInfo.notebookId) {
 				new Notice(t('notice.selectNotebookFirst'));
@@ -1613,7 +1588,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 					xhr.onload = function() {
 						var text = xhr.responseText;
-						console.log('[API Response]', text.substring(0, 300));
 						if (xhr.status === 200 && text.includes('wrb.fr')) {
 							window['__obsidian_result_' + requestId] = { success: true, pending: false };
 						} else {
@@ -1646,7 +1620,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 				if (result) break;
 			}
 
-			console.log('[Star NotebookLM] URL API result:', result);
 
 			if (result?.success) {
 				new Notice(t('notice.urlSourceAdded', { title: note.title }));
@@ -1679,7 +1652,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						const text = (tab.textContent || '').trim().toLowerCase();
 						if (text.includes('출처') || text.includes('sources') || text.includes('소스')) {
 							tab.click();
-							console.log('[Bridge] Switched to Sources tab');
 							return { success: true, tab: text };
 						}
 					}
@@ -1690,7 +1662,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						const text = (item.textContent || '').trim().toLowerCase();
 						if (text.includes('출처') || text.includes('sources') || text.includes('소스')) {
 							item.click();
-							console.log('[Bridge] Clicked nav item:', text);
 							return { success: true, nav: text };
 						}
 					}
@@ -1728,7 +1699,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						const btn = document.querySelector(sel);
 						if (btn && !btn.disabled) {
 							btn.click();
-							console.log('[Bridge] Clicked:', sel);
 							return { success: true, selector: sel };
 						}
 					}
@@ -1740,7 +1710,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						if (text.includes('소스 추가') || text.includes('소스 업로드') ||
 							text === 'upload' || text.includes('Add source')) {
 							btn.click();
-							console.log('[Bridge] Clicked button with text:', text);
 							return { success: true, text: text };
 						}
 					}
@@ -1748,7 +1717,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: 'Source add button not found' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Step 1 (소스 추가 버튼):', step1);
 
 			// Step 2: 소스 업로드 모달에서 스크롤 후 "복사된 텍스트" 옵션 찾아 클릭
 			await this.delay(1500);
@@ -1761,7 +1729,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					if (bottomSheet) {
 						// bottom-sheet 자체를 스크롤
 						bottomSheet.scrollTop = bottomSheet.scrollHeight;
-						console.log('[Bridge] Scrolled mat-bottom-sheet-container');
 					}
 
 					// upload-dialog-panel 내부 스크롤
@@ -1774,7 +1741,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 							const style = window.getComputedStyle(el);
 							if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
 								el.scrollTop = el.scrollHeight;
-								console.log('[Bridge] Scrolled inner element:', el.className);
 							}
 						}
 					}
@@ -1797,7 +1763,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						const text = (el.textContent || '').trim();
 						if (text === '텍스트 붙여넣기' || text === 'Paste text') {
 							el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-							console.log('[Bridge] Scrolled to 텍스트 붙여넣기 via scrollIntoView');
 							return;
 						}
 					}
@@ -1806,7 +1771,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						const text = (el.textContent || '').trim();
 						if (text === '복사된 텍스트' || text === 'Copied text') {
 							el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-							console.log('[Bridge] Scrolled to 복사된 텍스트 via scrollIntoView');
 							return;
 						}
 					}
@@ -1824,7 +1788,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						// 정확히 "복사된 텍스트" 매칭
 						if (text === '복사된 텍스트' || text === 'Copied text') {
 							el.click();
-							console.log('[Bridge] Clicked 복사된 텍스트:', el.tagName, el.className);
 							return { success: true, clicked: text };
 						}
 					}
@@ -1834,7 +1797,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 						const text = (el.textContent || '').trim();
 						if (text === '텍스트 붙여넣기' || text === 'Paste text') {
 							el.click();
-							console.log('[Bridge] Clicked 텍스트 붙여넣기:', el.tagName);
 							return { success: true, clicked: text, needsSecondClick: true };
 						}
 					}
@@ -1842,7 +1804,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: 'Text paste option not found in DOM' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Step 2 (복사된 텍스트 옵션):', step2);
 
 			// Step 2.5: "텍스트 붙여넣기" 클릭 후 "복사된 텍스트" 클릭 필요
 			if (step2?.needsSecondClick) {
@@ -1856,7 +1817,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 							const text = (el.textContent || '').trim();
 							if (text === '복사된 텍스트' || text === 'Copied text') {
 								el.click();
-								console.log('[Bridge] Step 2.5: Clicked 복사된 텍스트');
 								return { success: true };
 							}
 						}
@@ -1890,14 +1850,12 @@ export default class StarNotebookLMPlugin extends Plugin {
 						textarea.dispatchEvent(new Event('input', { bubbles: true }));
 						textarea.dispatchEvent(new Event('change', { bubbles: true }));
 						textarea.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-						console.log('[Bridge] Text inserted into textarea.text-area');
 						return { success: true };
 					}
 
 					return { success: false, error: 'textarea.text-area not found or not visible' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Step 3 (텍스트 입력):', step3);
 
 			// Step 4: 삽입 버튼 클릭
 			await this.delay(800);
@@ -1911,7 +1869,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 							// 버튼이 활성화될 때까지 대기
 							if (!btn.disabled) {
 								btn.click();
-								console.log('[Bridge] Clicked 삽입 button');
 								return { success: true };
 							} else {
 								return { success: false, error: '삽입 button is disabled' };
@@ -1921,7 +1878,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: '삽입 button not found' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Step 4 (삽입 버튼):', step4);
 
 			if (step3?.success && step4?.success) {
 				new Notice(t('notice.sourceAdded', { title: note.title }), 5000);
@@ -1993,7 +1949,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: 'Source add button not found' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Link Step 1 (소스 추가 버튼):', step1);
 
 			await this.delay(1500);
 
@@ -2025,7 +1980,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: '링크 option not found' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Link Step 2 (링크 클릭):', step2);
 
 			await this.delay(1000);
 
@@ -2042,7 +1996,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: '웹사이트 option not found' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Link Step 3 (웹사이트 클릭):', step3);
 
 			await this.delay(2000);
 
@@ -2097,7 +2050,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: 'URL textarea not found' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Link Step 4 (URL 입력):', step4);
 
 			await this.delay(1000);
 
@@ -2119,7 +2071,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 					return { success: false, error: '삽입 button not found' };
 				})();
 			`);
-			console.log('[Star NotebookLM] Link Step 5 (삽입 버튼):', step5);
 
 			if (step4?.success && step5?.success) {
 				new Notice(t('notice.linkSourceAdded', { title: note.title, link: note.shareLink! }), 5000);
@@ -2273,7 +2224,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 			await this.app.vault.adapter.write(debugPath, debugContent);
 			new Notice(t('notice.domSaved', { path: debugPath, buttons: domInfo.buttons.length, links: domInfo.notebookLinks.length, inputs: domInfo.textInputs.length, dialogs: domInfo.dialogs.length }), 8000);
 
-			console.log('[Star NotebookLM] DOM Info:', domInfo);
 
 		} catch (error) {
 			console.error('[Star NotebookLM] Debug failed:', error);
@@ -2300,7 +2250,6 @@ export default class StarNotebookLMPlugin extends Plugin {
 			// 페이지 로드 대기 후 노트북 목록 가져오고 모달 표시
 			setTimeout(async () => {
 				const notebooks = await this.getNotebooksFromWebview();
-				console.log('[Star NotebookLM] Found notebooks:', notebooks);
 				this.showNotebookModal(note, notebooks);
 			}, 3000);
 		} else {
@@ -2386,7 +2335,6 @@ class NotebookLMView extends ItemView {
 			});
 
 			this.webview.addEventListener('did-navigate', (event: any) => {
-				console.log('[NotebookLM] Navigated to:', event.url);
 			});
 		}
 	}
@@ -2416,7 +2364,6 @@ class NotebookLMView extends ItemView {
 				if (window.__obsidianBridgeInjected) return;
 				window.__obsidianBridgeInjected = true;
 
-				console.log('[Obsidian Bridge] Script injected');
 
 				// 페이지 상태 분석
 				function analyzePageState() {
@@ -2461,7 +2408,6 @@ class NotebookLMView extends ItemView {
 
 				// 소스 추가 함수
 				async function addSource(content, title) {
-					console.log('[Obsidian Bridge] Adding source:', title);
 
 					// "Add source" 버튼 찾기
 					const addBtnSelectors = [
@@ -2597,7 +2543,6 @@ class NotebookLMView extends ItemView {
 
 		try {
 			await this.webview.executeJavaScript(script);
-			console.log('[NotebookLM] Script injected successfully');
 		} catch (error) {
 			console.error('[NotebookLM] Script injection failed:', error);
 		}
@@ -2615,7 +2560,6 @@ class NotebookLMView extends ItemView {
 	// 웹뷰 메시지 처리
 	handleWebviewMessage(event: any) {
 		const { action, result } = event.args[0] || {};
-		console.log('[NotebookLM] Message from webview:', action, result);
 
 		if (action === 'pageStateChanged') {
 			this.plugin.currentPageState = result;

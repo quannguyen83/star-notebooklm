@@ -35,8 +35,6 @@ Obsidian 노트를 Google NotebookLM에 소스로 추가하는 플러그인입�
 ### 빌드
 
 ```bash
-cd star-notebooklm
-
 # 의존성 설치
 npm install
 
@@ -147,3 +145,11 @@ MIT License
 ## 기여
 
 버그 리포트, 기능 제안, PR 환영합니다!
+
+## Privacy and network use
+
+Star NotebookLM opens Google NotebookLM in an embedded view and sends note content to Google NotebookLM only when you choose to transfer notes. A Google account is required for NotebookLM. The plugin does not collect telemetry.
+
+## License
+
+MIT License. See [LICENSE](./LICENSE).

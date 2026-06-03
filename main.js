@@ -431,7 +431,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       view.webview.loadURL("https://notebooklm.google.com");
       setTimeout(async () => {
         const notebooks = await this.getNotebooksFromWebview();
-        console.log("[Star NotebookLM] Found notebooks:", notebooks);
         this.showNotebookModal(note, notebooks);
       }, 3e3);
     } else {
@@ -440,7 +439,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   }
   // 노트북 선택 모달 표시
   async showNotebookSelectModal(note) {
-    console.log("[Star NotebookLM] \uBAA8\uB2EC \uD45C\uC2DC \uC2DC\uC791");
     let notebooks = [];
     const view = this.getNotebookLMView();
     if (view && view.webview) {
@@ -470,12 +468,10 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					})();
 				`);
         notebooks = result || [];
-        console.log("[Star NotebookLM] \uB178\uD2B8\uBD81 \uBAA9\uB85D:", notebooks);
       } catch (error) {
         console.error("[Star NotebookLM] \uB178\uD2B8\uBD81 \uBAA9\uB85D \uAC00\uC838\uC624\uAE30 \uC2E4\uD328:", error);
       }
     }
-    console.log("[Star NotebookLM] \uBAA8\uB2EC \uC0DD\uC131");
     const modal = new NotebookSelectModal(this.app, this, notebooks, note.title, async (selectedNotebook) => {
       await this.openNotebookLMView();
       const nlmView = this.getNotebookLMView();
@@ -509,7 +505,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       view.webview.loadURL("https://notebooklm.google.com");
       setTimeout(async () => {
         const notebooks = await this.getNotebooksFromWebview();
-        console.log("[Star NotebookLM] Found notebooks:", notebooks);
         this.showNotebookModal(note, notebooks);
       }, 3e3);
     } else {
@@ -693,11 +688,9 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     try {
       const rpcResult = await this.getNotebooksViaRPC(view);
       if (rpcResult && rpcResult.length > 0) {
-        console.log("[Star NotebookLM] RPC\uB85C \uB178\uD2B8\uBD81 \uBAA9\uB85D \uAC00\uC838\uC634:", rpcResult.length);
         return rpcResult;
       }
     } catch (error) {
-      console.log("[Star NotebookLM] RPC \uB178\uD2B8\uBD81 \uBAA9\uB85D \uC2E4\uD328, DOM \uD3F4\uBC31:", error);
     }
     try {
       const result = await this.getNotebooksViaDOM(view);
@@ -750,7 +743,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 				xhr.onload = function() {
 					try {
 						var text = xhr.responseText;
-						console.log('[RPC wXbhsf Response]', text.substring(0, 500));
 						if (xhr.status === 200 && text.includes('wrb.fr')) {
 							// batchexecute \uC751\uB2F5 \uD30C\uC2F1
 							var notebooks = [];
@@ -873,7 +865,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					});
 				}
 
-				console.log('[Bridge DOM] Found notebooks:', notebooks.length);
 				return notebooks;
 			})();
 		`);
@@ -902,7 +893,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 											const row = el.closest('tr');
 											if (row) {
 												row.click();
-												console.log('[Bridge] Clicked table row for:', title);
 												return { success: true, method: 'table' };
 											}
 										}
@@ -918,7 +908,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 											// mat-card \uB610\uB294 primary-action-button \uD074\uB9AD
 											const clickTarget = btn.querySelector('.primary-action-button, mat-card.project-button-card') || btn;
 											clickTarget.click();
-											console.log('[Bridge] Clicked project-button for:', title);
 											return { success: true, method: 'projectButton' };
 										}
 									}
@@ -932,7 +921,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 										if (titleEl && titleEl.textContent.trim() === title) {
 											const clickTarget = card.querySelector('.primary-action-button') || card;
 											clickTarget.click();
-											console.log('[Bridge] Clicked mat-card for:', title);
 											return { success: true, method: 'matcard' };
 										}
 									}
@@ -947,7 +935,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 										// \uD074\uB9AD \uAC00\uB2A5\uD55C \uBD80\uBAA8 \uCC3E\uAE30
 										const clickable = el.closest('[role="button"], a, button, [class*="card"], [class*="item"], tr') || el;
 										clickable.click();
-										console.log('[Bridge] Clicked element for:', title, clickable.tagName);
 										return { success: true, method: 'fallback' };
 									}
 								}
@@ -970,7 +957,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 								const text = (btn.textContent || '').toLowerCase();
 								if (text.includes('\uB9CC\uB4E4\uAE30') || text.includes('create')) {
 									btn.click();
-									console.log('[Bridge] Clicked create notebook button');
 									return true;
 								}
 							}
@@ -985,7 +971,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 								for (const btn of closeButtons) {
 									if (btn.offsetParent !== null) {
 										btn.click();
-										console.log('[Bridge] Closed dialog via close button');
 										return { success: true, method: 'closeButton' };
 									}
 								}
@@ -994,13 +979,11 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 								const backdrop = document.querySelector('.cdk-overlay-backdrop, .mat-mdc-dialog-container + .cdk-overlay-backdrop');
 								if (backdrop) {
 									backdrop.click();
-									console.log('[Bridge] Closed dialog via backdrop');
 									return { success: true, method: 'backdrop' };
 								}
 
 								// \uBC29\uBC95 3: Escape \uD0A4 \uC804\uC1A1
 								document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
-								console.log('[Bridge] Sent Escape key');
 								return { success: true, method: 'escape' };
 							})();
 						`);
@@ -1069,7 +1052,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					xhr.onload = function() {
 						try {
 							var text = xhr.responseText;
-							console.log('[RPC CCqFvf Response]', text.substring(0, 500));
 							if (xhr.status === 200 && text.includes('wrb.fr')) {
 								// \uC751\uB2F5\uC5D0\uC11C \uC0C8 \uB178\uD2B8\uBD81 ID \uCD94\uCD9C
 								var notebookId = null;
@@ -1124,7 +1106,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
           this.addSourceToNotebook(view, note);
         }, 3e3);
       } else {
-        console.log("[Star NotebookLM] \uB178\uD2B8\uBD81 \uC0DD\uC131 RPC \uC2E4\uD328, DOM \uD3F4\uBC31");
         await this.createNewNotebookViaDOM(view, note);
       }
     } catch (error) {
@@ -1144,7 +1125,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						var text = allButtons[i].textContent.toLowerCase();
 						if (text.includes('\uB9CC\uB4E4\uAE30') || text.includes('create') || text.includes('new')) {
 							allButtons[i].click();
-							console.log('[Obsidian Bridge] Create button clicked (DOM fallback)');
 							return { success: true };
 						}
 					}
@@ -1212,7 +1192,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { notebookId, atToken };
 				})();
 			`);
-      console.log("[Star NotebookLM] Page info:", pageInfo);
       if (!pageInfo.notebookId) {
         new import_obsidian.Notice(t("notice.selectNotebookFirst"));
         await this.addSourceViaDOM(view, note);
@@ -1281,7 +1260,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 
 					xhr.onload = function() {
 						var text = xhr.responseText;
-						console.log('[API Response]', text.substring(0, 300));
 						if (xhr.status === 200 && text.includes('wrb.fr')) {
 							window['__obsidian_result_' + requestId] = { success: true, pending: false };
 						} else {
@@ -1312,11 +1290,9 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         if (result)
           break;
       }
-      console.log("[Star NotebookLM] Text API result:", result);
       if (result == null ? void 0 : result.success) {
         new import_obsidian.Notice(t("notice.textSourceAdded", { title }));
       } else {
-        console.log("[Star NotebookLM] Text API failed, falling back to DOM");
         new import_obsidian.Notice(t("notice.apiFailed"));
         await this.addSourceViaDOM(view, note);
       }
@@ -1354,7 +1330,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { notebookId, atToken };
 				})();
 			`);
-      console.log("[Star NotebookLM] Page info:", pageInfo);
       if (!pageInfo.notebookId) {
         new import_obsidian.Notice(t("notice.selectNotebookFirst"));
         return;
@@ -1395,7 +1370,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 
 					xhr.onload = function() {
 						var text = xhr.responseText;
-						console.log('[API Response]', text.substring(0, 300));
 						if (xhr.status === 200 && text.includes('wrb.fr')) {
 							window['__obsidian_result_' + requestId] = { success: true, pending: false };
 						} else {
@@ -1426,7 +1400,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         if (result)
           break;
       }
-      console.log("[Star NotebookLM] URL API result:", result);
       if (result == null ? void 0 : result.success) {
         new import_obsidian.Notice(t("notice.urlSourceAdded", { title: note.title }));
       } else {
@@ -1454,7 +1427,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						const text = (tab.textContent || '').trim().toLowerCase();
 						if (text.includes('\uCD9C\uCC98') || text.includes('sources') || text.includes('\uC18C\uC2A4')) {
 							tab.click();
-							console.log('[Bridge] Switched to Sources tab');
 							return { success: true, tab: text };
 						}
 					}
@@ -1465,7 +1437,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						const text = (item.textContent || '').trim().toLowerCase();
 						if (text.includes('\uCD9C\uCC98') || text.includes('sources') || text.includes('\uC18C\uC2A4')) {
 							item.click();
-							console.log('[Bridge] Clicked nav item:', text);
 							return { success: true, nav: text };
 						}
 					}
@@ -1499,7 +1470,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						const btn = document.querySelector(sel);
 						if (btn && !btn.disabled) {
 							btn.click();
-							console.log('[Bridge] Clicked:', sel);
 							return { success: true, selector: sel };
 						}
 					}
@@ -1511,7 +1481,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						if (text.includes('\uC18C\uC2A4 \uCD94\uAC00') || text.includes('\uC18C\uC2A4 \uC5C5\uB85C\uB4DC') ||
 							text === 'upload' || text.includes('Add source')) {
 							btn.click();
-							console.log('[Bridge] Clicked button with text:', text);
 							return { success: true, text: text };
 						}
 					}
@@ -1519,7 +1488,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: 'Source add button not found' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Step 1 (\uC18C\uC2A4 \uCD94\uAC00 \uBC84\uD2BC):", step1);
       await this.delay(1500);
       await view.webview.executeJavaScript(`
 				(function() {
@@ -1528,7 +1496,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					if (bottomSheet) {
 						// bottom-sheet \uC790\uCCB4\uB97C \uC2A4\uD06C\uB864
 						bottomSheet.scrollTop = bottomSheet.scrollHeight;
-						console.log('[Bridge] Scrolled mat-bottom-sheet-container');
 					}
 
 					// upload-dialog-panel \uB0B4\uBD80 \uC2A4\uD06C\uB864
@@ -1541,7 +1508,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 							const style = window.getComputedStyle(el);
 							if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
 								el.scrollTop = el.scrollHeight;
-								console.log('[Bridge] Scrolled inner element:', el.className);
 							}
 						}
 					}
@@ -1561,7 +1527,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						const text = (el.textContent || '').trim();
 						if (text === '\uD14D\uC2A4\uD2B8 \uBD99\uC5EC\uB123\uAE30' || text === 'Paste text') {
 							el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-							console.log('[Bridge] Scrolled to \uD14D\uC2A4\uD2B8 \uBD99\uC5EC\uB123\uAE30 via scrollIntoView');
 							return;
 						}
 					}
@@ -1570,7 +1535,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						const text = (el.textContent || '').trim();
 						if (text === '\uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8' || text === 'Copied text') {
 							el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-							console.log('[Bridge] Scrolled to \uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8 via scrollIntoView');
 							return;
 						}
 					}
@@ -1586,7 +1550,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						// \uC815\uD655\uD788 "\uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8" \uB9E4\uCE6D
 						if (text === '\uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8' || text === 'Copied text') {
 							el.click();
-							console.log('[Bridge] Clicked \uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8:', el.tagName, el.className);
 							return { success: true, clicked: text };
 						}
 					}
@@ -1596,7 +1559,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						const text = (el.textContent || '').trim();
 						if (text === '\uD14D\uC2A4\uD2B8 \uBD99\uC5EC\uB123\uAE30' || text === 'Paste text') {
 							el.click();
-							console.log('[Bridge] Clicked \uD14D\uC2A4\uD2B8 \uBD99\uC5EC\uB123\uAE30:', el.tagName);
 							return { success: true, clicked: text, needsSecondClick: true };
 						}
 					}
@@ -1604,7 +1566,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: 'Text paste option not found in DOM' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Step 2 (\uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8 \uC635\uC158):", step2);
       if (step2 == null ? void 0 : step2.needsSecondClick) {
         await this.delay(800);
         await view.webview.executeJavaScript(`
@@ -1616,7 +1577,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 							const text = (el.textContent || '').trim();
 							if (text === '\uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8' || text === 'Copied text') {
 								el.click();
-								console.log('[Bridge] Step 2.5: Clicked \uBCF5\uC0AC\uB41C \uD14D\uC2A4\uD2B8');
 								return { success: true };
 							}
 						}
@@ -1647,14 +1607,12 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						textarea.dispatchEvent(new Event('input', { bubbles: true }));
 						textarea.dispatchEvent(new Event('change', { bubbles: true }));
 						textarea.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-						console.log('[Bridge] Text inserted into textarea.text-area');
 						return { success: true };
 					}
 
 					return { success: false, error: 'textarea.text-area not found or not visible' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Step 3 (\uD14D\uC2A4\uD2B8 \uC785\uB825):", step3);
       await this.delay(800);
       const step4 = await view.webview.executeJavaScript(`
 				(function() {
@@ -1665,7 +1623,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 							// \uBC84\uD2BC\uC774 \uD65C\uC131\uD654\uB420 \uB54C\uAE4C\uC9C0 \uB300\uAE30
 							if (!btn.disabled) {
 								btn.click();
-								console.log('[Bridge] Clicked \uC0BD\uC785 button');
 								return { success: true };
 							} else {
 								return { success: false, error: '\uC0BD\uC785 button is disabled' };
@@ -1675,7 +1632,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: '\uC0BD\uC785 button not found' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Step 4 (\uC0BD\uC785 \uBC84\uD2BC):", step4);
       if ((step3 == null ? void 0 : step3.success) && (step4 == null ? void 0 : step4.success)) {
         new import_obsidian.Notice(t("notice.sourceAdded", { title: note.title }), 5e3);
       } else if (step3 == null ? void 0 : step3.success) {
@@ -1740,7 +1696,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: 'Source add button not found' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Link Step 1 (\uC18C\uC2A4 \uCD94\uAC00 \uBC84\uD2BC):", step1);
       await this.delay(1500);
       await view.webview.executeJavaScript(`
 				(function() {
@@ -1768,7 +1723,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: '\uB9C1\uD06C option not found' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Link Step 2 (\uB9C1\uD06C \uD074\uB9AD):", step2);
       await this.delay(1e3);
       const step3 = await view.webview.executeJavaScript(`
 				(function() {
@@ -1782,7 +1736,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: '\uC6F9\uC0AC\uC774\uD2B8 option not found' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Link Step 3 (\uC6F9\uC0AC\uC774\uD2B8 \uD074\uB9AD):", step3);
       await this.delay(2e3);
       const shareLink = note.shareLink;
       const step4 = await view.webview.executeJavaScript(`
@@ -1834,7 +1787,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: 'URL textarea not found' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Link Step 4 (URL \uC785\uB825):", step4);
       await this.delay(1e3);
       const step5 = await view.webview.executeJavaScript(`
 				(function() {
@@ -1853,7 +1805,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					return { success: false, error: '\uC0BD\uC785 button not found' };
 				})();
 			`);
-      console.log("[Star NotebookLM] Link Step 5 (\uC0BD\uC785 \uBC84\uD2BC):", step5);
       if ((step4 == null ? void 0 : step4.success) && (step5 == null ? void 0 : step5.success)) {
         new import_obsidian.Notice(t("notice.linkSourceAdded", { title: note.title, link: note.shareLink }), 5e3);
       } else if (step4 == null ? void 0 : step4.success) {
@@ -1997,7 +1948,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       const debugPath = "notebooklm-debug.json";
       await this.app.vault.adapter.write(debugPath, debugContent);
       new import_obsidian.Notice(t("notice.domSaved", { path: debugPath, buttons: domInfo.buttons.length, links: domInfo.notebookLinks.length, inputs: domInfo.textInputs.length, dialogs: domInfo.dialogs.length }), 8e3);
-      console.log("[Star NotebookLM] DOM Info:", domInfo);
     } catch (error) {
       console.error("[Star NotebookLM] Debug failed:", error);
       new import_obsidian.Notice(t("notice.domFailed", { error: error.message }));
@@ -2016,7 +1966,6 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       view.webview.loadURL("https://notebooklm.google.com");
       setTimeout(async () => {
         const notebooks = await this.getNotebooksFromWebview();
-        console.log("[Star NotebookLM] Found notebooks:", notebooks);
         this.showNotebookModal(note, notebooks);
       }, 3e3);
     } else {
@@ -2076,7 +2025,6 @@ var NotebookLMView = class extends import_obsidian.ItemView {
         this.handleWebviewMessage(event);
       });
       this.webview.addEventListener("did-navigate", (event) => {
-        console.log("[NotebookLM] Navigated to:", event.url);
       });
     }
   }
@@ -2101,7 +2049,6 @@ var NotebookLMView = class extends import_obsidian.ItemView {
 				if (window.__obsidianBridgeInjected) return;
 				window.__obsidianBridgeInjected = true;
 
-				console.log('[Obsidian Bridge] Script injected');
 
 				// \uD398\uC774\uC9C0 \uC0C1\uD0DC \uBD84\uC11D
 				function analyzePageState() {
@@ -2146,7 +2093,6 @@ var NotebookLMView = class extends import_obsidian.ItemView {
 
 				// \uC18C\uC2A4 \uCD94\uAC00 \uD568\uC218
 				async function addSource(content, title) {
-					console.log('[Obsidian Bridge] Adding source:', title);
 
 					// "Add source" \uBC84\uD2BC \uCC3E\uAE30
 					const addBtnSelectors = [
@@ -2281,7 +2227,6 @@ var NotebookLMView = class extends import_obsidian.ItemView {
 		`;
     try {
       await this.webview.executeJavaScript(script);
-      console.log("[NotebookLM] Script injected successfully");
     } catch (error) {
       console.error("[NotebookLM] Script injection failed:", error);
     }
@@ -2297,7 +2242,6 @@ var NotebookLMView = class extends import_obsidian.ItemView {
   // 웹뷰 메시지 처리
   handleWebviewMessage(event) {
     const { action, result } = event.args[0] || {};
-    console.log("[NotebookLM] Message from webview:", action, result);
     if (action === "pageStateChanged") {
       this.plugin.currentPageState = result;
       this.plugin.updateStatusBar();

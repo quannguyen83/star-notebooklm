@@ -1,0 +1,10 @@
+{
+  "id": "star-notebooklm",
+  "name": "Star NotebookLM",
+  "version": "1.2.1",
+  "minAppVersion": "1.0.0",
+  "description": "Send Obsidian notes directly to Google NotebookLM as sources from an embedded NotebookLM view.",
+  "author": "starhunter",
+  "authorUrl": "https://github.com/starhunter",
+  "isDesktopOnly": true
+}
