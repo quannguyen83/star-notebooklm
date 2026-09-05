@@ -348,10 +348,10 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 
 		this.addCommand({
-			id: 'save-notebooklm-response-to-obsidian',
-			name: 'Save current NotebookLM response to Obsidian',
+			id: 'save-from-notebooklm-to-obsidian',
+			name: 'Save from NotebookLM to Obsidian...',
 			callback: async () => {
-				await this.saveCurrentNotebookLMResponse();
+				this.showNotebookLMSaveOptions();
 			}
 		});
 
@@ -854,6 +854,134 @@ export default class StarNotebookLMPlugin extends Plugin {
 		}
 	}
  
+
+
+	showNotebookLMSaveOptions() {
+		const modal = new Modal(this.app);
+		modal.titleEl.setText('Save from NotebookLM');
+		modal.contentEl.empty();
+		modal.contentEl.createEl('p', { text: 'Choose what you want to save into the current Obsidian note.' });
+
+		const latest = modal.contentEl.createEl('button', { text: 'Latest chat response' });
+		latest.style.width = '100%';
+		latest.style.marginBottom = '10px';
+		latest.onclick = async () => {
+			modal.close();
+			await this.saveCurrentNotebookLMResponse();
+		};
+
+		const note = modal.contentEl.createEl('button', { text: 'NotebookLM note' });
+		note.style.width = '100%';
+		note.onclick = async () => {
+			modal.close();
+			await this.saveNotebookLMNoteToObsidian();
+		};
+		modal.open();
+	}
+
+	async saveNotebookLMNoteToObsidian() {
+		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const targetFile = markdownView?.file;
+		if (!targetFile) {
+			new Notice('Open the Obsidian note you want to save into first.');
+			return;
+		}
+
+		const view = this.getNotebookLMView();
+		if (!view?.webview) {
+			new Notice('NotebookLM panel is not available.');
+			return;
+		}
+
+		new Notice('Loading NotebookLM notes...');
+		try {
+			const result = await view.webview.executeJavaScript(`
+				(async function() {
+					const match = window.location.pathname.match(/\\/notebook\\/([^/]+)/);
+					const notebookId = match ? match[1] : null;
+					if (!notebookId) return { error: 'Open a NotebookLM notebook first.' };
+
+					let atToken = null;
+					for (const script of document.querySelectorAll('script')) {
+						const m = (script.textContent || '').match(/"SNlM0e":"([^"]+)"/);
+						if (m) { atToken = m[1]; break; }
+					}
+					if (!atToken && window.WIZ_global_data && window.WIZ_global_data.SNlM0e) atToken = window.WIZ_global_data.SNlM0e;
+					if (!atToken) return { error: 'NotebookLM authentication token was not found.' };
+
+					const rpcId = 'cFji9';
+					const form = new URLSearchParams();
+					form.append('at', atToken);
+					form.append('f.req', JSON.stringify([[[rpcId, JSON.stringify([notebookId]), null, 'generic']]]));
+					const response = await fetch('/_/LabsTailwindUi/data/batchexecute?rpcids=' + rpcId + '&source-path=' + encodeURIComponent('/notebook/' + notebookId), {
+						method: 'POST', credentials: 'include',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-Same-Domain': '1' },
+						body: form.toString()
+					});
+					if (!response.ok) return { error: 'NotebookLM notes request failed: HTTP ' + response.status };
+
+					const text = await response.text();
+					let data = null;
+					for (const line of text.split('\\n')) {
+						if (!line || line.startsWith(")]}'")) continue;
+						try {
+							const parsed = JSON.parse(line);
+							for (const row of (Array.isArray(parsed) ? parsed : [])) {
+								if (Array.isArray(row) && row[0] === 'wrb.fr' && row[1] === rpcId && typeof row[2] === 'string') {
+									data = JSON.parse(row[2]); break;
+								}
+							}
+						} catch (_) {}
+						if (data) break;
+					}
+					if (!data || !Array.isArray(data) || !Array.isArray(data[0])) return { notebookId, notes: [] };
+
+					const notes = [];
+					for (const item of data[0]) {
+						if (!Array.isArray(item) || !item.length || typeof item[0] !== 'string') continue;
+						if (item[1] === null && item[2] === 2) continue;
+						let content = '', title = '';
+						if (typeof item[1] === 'string') content = item[1];
+						else if (Array.isArray(item[1])) {
+							const inner = item[1];
+							if (typeof inner[1] === 'string') content = inner[1];
+							if (typeof inner[4] === 'string') title = inner[4];
+						}
+						if (!content) continue;
+						if (content.includes('"children":') || content.includes('"nodes":')) continue;
+						notes.push({ id: item[0], title: title || 'Untitled Note', content });
+					}
+					return { notebookId, notes };
+				})()
+			`);
+
+			if (result?.error) { new Notice(result.error); return; }
+			const notes = Array.isArray(result?.notes) ? result.notes : [];
+			if (!notes.length) { new Notice('No NotebookLM notes found in the current notebook.'); return; }
+
+			const modal = new Modal(this.app);
+			modal.titleEl.setText('Choose NotebookLM note');
+			modal.contentEl.empty();
+			for (const note of notes) {
+				const button = modal.contentEl.createEl('button', { text: String(note.title || 'Untitled Note') });
+				button.style.width = '100%';
+				button.style.marginBottom = '8px';
+				button.onclick = async () => {
+					modal.close();
+					const current = await this.app.vault.read(targetFile);
+					const stamp = new Date().toLocaleString();
+					const title = String(note.title || 'Untitled Note').replace(/\n/g, ' ');
+					const block = `\n\n## NotebookLM Notes\n\n### ${title}\n\n> Imported ${stamp}\n\n${String(note.content || '').trim()}\n`;
+					await this.app.vault.modify(targetFile, current + block);
+					new Notice(`✅ NotebookLM note saved to ${targetFile.basename}.`);
+				};
+			}
+			modal.open();
+		} catch (error) {
+			console.error('[Star NotebookLM] NotebookLM note import failed:', error);
+			new Notice(`NotebookLM note import failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
 
 	async saveCurrentNotebookLMResponse() {
 		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
