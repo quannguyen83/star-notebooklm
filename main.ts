@@ -1148,7 +1148,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 					const notes = [];
 					const seenNotes = new Set();
 					function normalizeKey(text) {
-						return String(text || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 500);
+						return String(text || '').toLowerCase().replace(/\\s+/g, ' ').trim().slice(0, 500);
 					}
 					function addNote(id, title, content, kind) {
 						content = String(content || '').trim();
@@ -1177,7 +1177,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 							const strings = [];
 							collectStrings(item.slice(1), strings);
 							const unique = Array.from(new Set(strings)).filter(v => v && v !== item[0]);
-							const candidates = unique.filter(v => v.length >= 40 && v.length <= 30000 && !/^https?:\/\//i.test(v));
+							const candidates = unique.filter(v => v.length >= 40 && v.length <= 30000 && !/^https?:\\/\\//i.test(v));
 							candidates.sort((a, b) => b.length - a.length);
 							content = candidates[0] || '';
 							if (!title) title = unique.find(v => v !== content && v.length >= 3 && v.length <= 140 && !/^[0-9a-f-]{20,}$/i.test(v)) || '';
@@ -1191,18 +1191,22 @@ export default class StarNotebookLMPlugin extends Plugin {
 						if (!el) return '';
 						const clone = el.cloneNode(true);
 						for (const icon of Array.from(clone.querySelectorAll('mat-icon,.mat-icon,.material-icons,.material-symbols-outlined,.material-symbols-rounded,[class*="material-symbol"],[aria-hidden="true"]'))) icon.remove();
-						return String(clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
+						return String(clone.innerText || clone.textContent || '').replace(/\\s+/g, ' ').trim();
 					}
 					const artifactSelectors = ['[class*="artifact"]','[data-testid*="artifact"]','[class*="generated"]','[data-testid*="generated"]','[class*="report-card"]','[data-testid*="report"]'];
 					let domIndex = 0;
-					for (const selector of artifactSelectors) {
-						for (const el of Array.from(document.querySelectorAll(selector))) {
-							if (el.closest('[class*="studio"],[data-testid*="studio"]')) continue;
-							const content = cleanDomText(el);
-							if (content.length < 60 || content.length > 30000) continue;
-							const heading = cleanDomText(el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="heading"]'));
-							addNote('generated-dom-' + (++domIndex), heading || 'Generated from chat', content, 'generated');
+					try {
+						for (const selector of artifactSelectors) {
+							for (const el of Array.from(document.querySelectorAll(selector))) {
+								if (el.closest('[class*="studio"],[data-testid*="studio"]')) continue;
+								const content = cleanDomText(el);
+								if (content.length < 60 || content.length > 30000) continue;
+								const heading = cleanDomText(el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="heading"]'));
+								addNote('generated-dom-' + (++domIndex), heading || 'Generated from chat', content, 'generated');
+							}
 						}
+					} catch (_) {
+						// Generated-text discovery is optional; normal NotebookLM notes must still load.
 					}
 					return { notebookId, notes };
 				})()
