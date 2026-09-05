@@ -756,29 +756,35 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
   }
   showNotebookLMSaveOptions() {
     const modal = new import_obsidian.Modal(this.app);
+    modal.modalEl.addClass("notebooklm-save-modal");
     modal.titleEl.setText("Save from NotebookLM");
     modal.contentEl.empty();
-    modal.contentEl.createEl("p", { text: "Choose what you want to save into the current Obsidian note." });
-    const latest = modal.contentEl.createEl("button", { text: "Latest chat response" });
-    latest.style.width = "100%";
-    latest.style.marginBottom = "10px";
-    latest.onclick = async () => {
-      modal.close();
+    modal.contentEl.createEl("p", {
+      cls: "notebooklm-save-subtitle",
+      text: "Choose what you want to bring into the current Obsidian note."
+    });
+    const options = modal.contentEl.createDiv({ cls: "notebooklm-save-options" });
+    const createOption = (icon, title, description, action) => {
+      const card = options.createEl("button", { cls: "notebooklm-save-option" });
+      card.createDiv({ cls: "notebooklm-save-option-icon", text: icon });
+      const textWrap = card.createDiv({ cls: "notebooklm-save-option-text" });
+      textWrap.createDiv({ cls: "notebooklm-save-option-title", text: title });
+      textWrap.createDiv({ cls: "notebooklm-save-option-desc", text: description });
+      card.createDiv({ cls: "notebooklm-save-option-arrow", text: "\u203A" });
+      card.onclick = async () => {
+        modal.close();
+        await action();
+      };
+    };
+    createOption("\u{1F4AC}", "Latest chat response", "Save the most recent NotebookLM answer.", async () => {
       await this.saveCurrentNotebookLMResponse();
-    };
-    const note = modal.contentEl.createEl("button", { text: "NotebookLM note" });
-    note.style.width = "100%";
-    note.style.marginBottom = "10px";
-    note.onclick = async () => {
-      modal.close();
+    });
+    createOption("\u{1F4DD}", "NotebookLM note", "Choose one of the notes created inside this notebook.", async () => {
       await this.saveNotebookLMNoteToObsidian();
-    };
-    const studio = modal.contentEl.createEl("button", { text: "Studio output" });
-    studio.style.width = "100%";
-    studio.onclick = async () => {
-      modal.close();
+    });
+    createOption("\u2728", "Studio output", "Import reports, study guides, mind maps, audio/video and other Studio outputs.", async () => {
       await this.saveNotebookLMStudioOutputToObsidian();
-    };
+    });
     modal.open();
   }
   async saveNotebookLMStudioOutputToObsidian() {
@@ -847,13 +853,16 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         return;
       }
       const modal = new import_obsidian.Modal(this.app);
+      modal.modalEl.addClass("notebooklm-save-modal");
       modal.titleEl.setText("Choose Studio output");
       modal.contentEl.empty();
+      modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Select an item to append to the current Obsidian note." });
+      const list = modal.contentEl.createDiv({ cls: "notebooklm-studio-list" });
       for (const item of items) {
         const label = `${String(item.type || "Studio")} \u2014 ${String(item.title || "Untitled")}`;
-        const button = modal.contentEl.createEl("button", { text: label });
-        button.style.width = "100%";
-        button.style.marginBottom = "8px";
+        const button = list.createEl("button", { cls: "notebooklm-studio-item" });
+        button.createDiv({ cls: "notebooklm-studio-type", text: String(item.type || "Studio") });
+        button.createDiv({ cls: "notebooklm-studio-title", text: String(item.title || "Untitled") });
         button.onclick = async () => {
           modal.close();
           const current = await this.app.vault.read(targetFile);

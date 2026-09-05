@@ -185,3 +185,40 @@
 .notebooklm-select-modal .modal-footer button {
     padding: 8px 16px;
 }
+
+
+/* NotebookLM save popup */
+.notebooklm-save-modal .modal {
+    width: min(520px, calc(100vw - 32px));
+    border-radius: 16px;
+    overflow: hidden;
+}
+.notebooklm-save-modal .modal-content { padding: 8px 4px 4px; }
+.notebooklm-save-modal .modal-title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.notebooklm-save-subtitle { margin: 2px 0 18px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.notebooklm-save-options { display: flex; flex-direction: column; gap: 10px; }
+.notebooklm-save-option {
+    width: 100%; min-height: 76px; display: grid; grid-template-columns: 44px 1fr 22px;
+    align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
+    border: 1px solid var(--background-modifier-border); border-radius: 12px;
+    background: var(--background-secondary); color: var(--text-normal); cursor: pointer; box-shadow: none;
+    transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+.notebooklm-save-option:hover { transform: translateY(-1px); border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
+.notebooklm-save-option-icon {
+    width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+    border-radius: 10px; background: var(--background-primary); font-size: 20px;
+}
+.notebooklm-save-option-text { min-width: 0; }
+.notebooklm-save-option-title { margin-bottom: 3px; font-size: 14px; font-weight: 650; }
+.notebooklm-save-option-desc { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+.notebooklm-save-option-arrow { color: var(--text-faint); font-size: 26px; font-weight: 300; transition: transform 120ms ease, color 120ms ease; }
+.notebooklm-save-option:hover .notebooklm-save-option-arrow { transform: translateX(2px); color: var(--interactive-accent); }
+.notebooklm-studio-list { display: flex; flex-direction: column; gap: 8px; max-height: 430px; overflow-y: auto; padding-right: 3px; }
+.notebooklm-studio-item {
+    width: 100%; padding: 11px 13px; text-align: left; border: 1px solid var(--background-modifier-border);
+    border-radius: 10px; background: var(--background-secondary); color: var(--text-normal); cursor: pointer; box-shadow: none;
+}
+.notebooklm-studio-item:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
+.notebooklm-studio-type { margin-bottom: 3px; color: var(--interactive-accent); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.notebooklm-studio-title { overflow: hidden; color: var(--text-normal); font-size: 13px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
