@@ -816,10 +816,10 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     createOption("\u{1F4AC}", "Latest chat response", "Save the most recent NotebookLM answer.", async () => {
       await this.saveCurrentNotebookLMResponse();
     });
-    createOption("\u{1F4DD}", "Notes & generated text", "Notes plus reports and other text artifacts created from chat.", async () => {
+    createOption("\u{1F4DD}", "NotebookLM notes", "Only notes created in this NotebookLM notebook.", async () => {
       await this.saveNotebookLMNoteToObsidian();
     });
-    createOption("\u2728", "Studio output", "Import reports, study guides, mind maps, audio/video and other Studio outputs.", async () => {
+    createOption("\u2728", "Other outputs", "Reports, audio/video, mind maps, quizzes, slide decks and other generated artifacts.", async () => {
       await this.saveNotebookLMStudioOutputToObsidian();
     });
     modal.open();
@@ -975,7 +975,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       }
       const modal = new import_obsidian.Modal(this.app);
       modal.modalEl.addClass("notebooklm-save-modal");
-      modal.titleEl.setText("Choose available Studio artifact");
+      modal.titleEl.setText("Choose other output");
       modal.contentEl.empty();
       const navButtons = [];
       const backButton = modal.contentEl.createEl("button", { cls: "notebooklm-back-button", text: "\u2190 Back" });
@@ -984,7 +984,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         modal.close();
         this.showNotebookLMSaveOptions();
       };
-      modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Only completed artifacts with real content or a downloadable file are shown." });
+      modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Only generated outputs that actually contain retrievable content or a file are shown." });
       const list = modal.contentEl.createDiv({ cls: "notebooklm-studio-list" });
       const studioDisplay = (rawType) => {
         const key = String(rawType || "").toLowerCase();
@@ -1114,26 +1114,9 @@ ${body}
 					if (!data || !Array.isArray(data) || !Array.isArray(data[0])) return { notebookId, notes: [] };
 
 					const notes = [];
-					const seenNotes = new Set();
-					function normalizeKey(text) {
-						return String(text || '').toLowerCase().replace(/\\s+/g, ' ').trim().slice(0, 500);
-					}
-					function addNote(id, title, content, kind) {
-						content = String(content || '').trim();
-						if (!content || content.includes('"children":') || content.includes('"nodes":')) return;
-						const key = normalizeKey(content);
-						if (!key || seenNotes.has(key)) return;
-						seenNotes.add(key);
-						notes.push({ id, title: String(title || '').trim() || (kind === 'generated' ? 'Generated from chat' : 'Untitled Note'), content, kind });
-					}
-					function collectStrings(node, out, depth = 0) {
-						if (depth > 8 || node == null) return;
-						if (typeof node === 'string') { if (node.trim()) out.push(node.trim()); return; }
-						if (Array.isArray(node)) for (const child of node) collectStrings(child, out, depth + 1);
-						else if (typeof node === 'object') for (const child of Object.values(node)) collectStrings(child, out, depth + 1);
-					}
 					for (const item of data[0]) {
 						if (!Array.isArray(item) || !item.length || typeof item[0] !== 'string') continue;
+						if (item[1] === null && item[2] === 2) continue;
 						let content = '', title = '';
 						if (typeof item[1] === 'string') content = item[1];
 						else if (Array.isArray(item[1])) {
@@ -1141,40 +1124,9 @@ ${body}
 							if (typeof inner[1] === 'string') content = inner[1];
 							if (typeof inner[4] === 'string') title = inner[4];
 						}
-						if (!content) {
-							const strings = [];
-							collectStrings(item.slice(1), strings);
-							const unique = Array.from(new Set(strings)).filter(v => v && v !== item[0]);
-							const candidates = unique.filter(v => v.length >= 40 && v.length <= 30000 && !/^https?:\\/\\//i.test(v));
-							candidates.sort((a, b) => b.length - a.length);
-							content = candidates[0] || '';
-							if (!title) title = unique.find(v => v !== content && v.length >= 3 && v.length <= 140 && !/^[0-9a-f-]{20,}$/i.test(v)) || '';
-						}
-						addNote(item[0], title, content, item[2] === 2 ? 'generated' : 'note');
-					}
-
-					// Chat requests can create report-like text artifacts that are not listed as Studio outputs.
-					// Detect those separately and merge them into the Notes category.
-					function cleanDomText(el) {
-						if (!el) return '';
-						const clone = el.cloneNode(true);
-						for (const icon of Array.from(clone.querySelectorAll('mat-icon,.mat-icon,.material-icons,.material-symbols-outlined,.material-symbols-rounded,[class*="material-symbol"],[aria-hidden="true"]'))) icon.remove();
-						return String(clone.innerText || clone.textContent || '').replace(/\\s+/g, ' ').trim();
-					}
-					const artifactSelectors = ['[class*="artifact"]','[data-testid*="artifact"]','[class*="generated"]','[data-testid*="generated"]','[class*="report-card"]','[data-testid*="report"]'];
-					let domIndex = 0;
-					try {
-						for (const selector of artifactSelectors) {
-							for (const el of Array.from(document.querySelectorAll(selector))) {
-								if (el.closest('[class*="studio"],[data-testid*="studio"]')) continue;
-								const content = cleanDomText(el);
-								if (content.length < 60 || content.length > 30000) continue;
-								const heading = cleanDomText(el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="heading"]'));
-								addNote('generated-dom-' + (++domIndex), heading || 'Generated from chat', content, 'generated');
-							}
-						}
-					} catch (_) {
-						// Generated-text discovery is optional; normal NotebookLM notes must still load.
+						if (!content) continue;
+						if (content.includes('"children":') || content.includes('"nodes":')) continue;
+						notes.push({ id: item[0], title: title || 'Untitled Note', content });
 					}
 					return { notebookId, notes };
 				})()
@@ -1190,7 +1142,7 @@ ${body}
       }
       const modal = new import_obsidian.Modal(this.app);
       modal.modalEl.addClass("notebooklm-save-modal");
-      modal.titleEl.setText("Choose note or generated text");
+      modal.titleEl.setText("Choose NotebookLM note");
       modal.contentEl.empty();
       const navButtons = [];
       const backButton = modal.contentEl.createEl("button", { cls: "notebooklm-back-button", text: "\u2190 Back" });
@@ -1199,21 +1151,25 @@ ${body}
         modal.close();
         this.showNotebookLMSaveOptions();
       };
-      modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "NotebookLM notes and report-like text generated from chat are collected here." });
+      modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Only NotebookLM notes are listed here. Generated reports and other outputs are kept separate." });
       const list = modal.contentEl.createDiv({ cls: "notebooklm-note-list" });
       for (const note of notes) {
         const button = list.createEl("button", { cls: "notebooklm-note-item" });
         navButtons.push(button);
-        const generated = note.kind === "generated";
-        button.createDiv({ cls: "notebooklm-note-icon", text: generated ? "\u{1F4C4}" : "\u{1F4DD}" });
-        const text = button.createDiv({ cls: "notebooklm-note-text" });
-        text.createDiv({ cls: "notebooklm-note-title", text: String(note.title || (generated ? "Generated from chat" : "Untitled Note")) });
-        text.createDiv({ cls: "notebooklm-note-kind", text: generated ? "Generated from chat" : "NotebookLM note" });
+        button.createDiv({ cls: "notebooklm-note-icon", text: "\u{1F4DD}" });
+        const textWrap = button.createDiv({ cls: "notebooklm-note-text" });
+        textWrap.createDiv({ cls: "notebooklm-note-title", text: String(note.title || "Untitled Note") });
+        textWrap.createDiv({ cls: "notebooklm-note-kind", text: "NotebookLM note" });
         button.onclick = async () => {
+          const body = this.sanitizeNotebookLMText(String(note.content || ""));
+          if (!body) {
+            new import_obsidian.Notice("This NotebookLM note has no retrievable content, so nothing was imported.");
+            return;
+          }
           modal.close();
           const current = await this.app.vault.read(targetFile);
           const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
-          const title = String(note.title || (generated ? "Generated from chat" : "Untitled Note")).replace(/\n/g, " ");
+          const title = String(note.title || "Untitled Note").replace(/\n/g, " ");
           const block = `
 
 ## NotebookLM Notes
@@ -1222,10 +1178,10 @@ ${body}
 
 > Imported ${stamp}
 
-${this.sanitizeNotebookLMText(String(note.content || ""))}
+${body}
 `;
           await this.app.vault.modify(targetFile, current + block);
-          new import_obsidian.Notice(`\u2705 NotebookLM text saved to ${targetFile.basename}.`);
+          new import_obsidian.Notice(`\u2705 NotebookLM note saved to ${targetFile.basename}.`);
         };
       }
       modal.open();
