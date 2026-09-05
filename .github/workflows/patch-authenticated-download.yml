@@ -1,0 +1,29 @@
+name: Patch authenticated artifact download
+on:
+  push:
+    branches: [fix-authenticated-artifact-download-temp]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Patch source
+        run: python .github/scripts/patch_authenticated_download.py
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Commit implementation
+        run: |
+          rm -f .github/workflows/patch-authenticated-download.yml .github/scripts/patch_authenticated_download.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: download NotebookLM artifacts with authenticated session"
+          git push
