@@ -885,10 +885,15 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Select an item to append to the current Obsidian note." });
       const list = modal.contentEl.createDiv({ cls: "notebooklm-studio-list" });
       for (const item of items) {
-        const label = `${String(item.type || "Studio")} \u2014 ${String(item.title || "Untitled")}`;
         const button = list.createEl("button", { cls: "notebooklm-studio-item" });
-        button.createDiv({ cls: "notebooklm-studio-type", text: String(item.type || "Studio") });
-        button.createDiv({ cls: "notebooklm-studio-title", text: String(item.title || "Untitled") });
+        const typeText = this.sanitizeNotebookLMText(String(item.type || "Studio output")).replace(/\n/g, " ").trim();
+        const titleText = this.sanitizeNotebookLMText(String(item.title || "")).replace(/\n/g, " ").trim();
+        const normalizedType = typeText.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        const normalizedTitle = titleText.toLowerCase().replace(/[^a-z0-9]+/g, "");
+        button.createDiv({ cls: "notebooklm-studio-type", text: typeText });
+        if (titleText && normalizedTitle !== normalizedType) {
+          button.createDiv({ cls: "notebooklm-studio-title", text: titleText });
+        }
         button.onclick = async () => {
           modal.close();
           const current = await this.app.vault.read(targetFile);
