@@ -789,6 +789,169 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       }
     });
   }
+  notebookLMSafeName(value) {
+    return String(value || "Untitled").replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().slice(0, 120) || "Untitled";
+  }
+  async ensureNotebookLMFolder(folder) {
+    const parts = folder.split("/").filter(Boolean);
+    let current = "";
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      if (!this.app.vault.getAbstractFileByPath(current)) {
+        try {
+          await this.app.vault.createFolder(current);
+        } catch (_) {
+        }
+      }
+    }
+  }
+  notebookLMImportMarker(kind, id) {
+    const safeId = String(id || "").trim();
+    return {
+      start: `<!-- notebooklm-${kind}:${safeId}:start -->`,
+      end: `<!-- notebooklm-${kind}:${safeId}:end -->`
+    };
+  }
+  async upsertNotebookLMBlock(targetFile, kind, id, block) {
+    const current = await this.app.vault.read(targetFile);
+    const marker = this.notebookLMImportMarker(kind, id);
+    const wrapped = `${marker.start}
+${block.trim()}
+${marker.end}`;
+    const start = current.indexOf(marker.start);
+    const end = start >= 0 ? current.indexOf(marker.end, start) : -1;
+    if (start >= 0 && end >= 0) {
+      const next = current.slice(0, start) + wrapped + current.slice(end + marker.end.length);
+      await this.app.vault.modify(targetFile, next);
+      return "updated";
+    }
+    await this.app.vault.modify(targetFile, current.trimEnd() + `
+
+${wrapped}
+`);
+    return "created";
+  }
+  async findNotebookLMSeparateMarkdown(kind, id) {
+    const needle = `notebooklm_${kind}_id: "${String(id || "").replace(/"/g, '\\"')}"`;
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      if (!file.path.startsWith("NotebookLM Imports/"))
+        continue;
+      try {
+        const text = await this.app.vault.cachedRead(file);
+        if (text.includes(needle))
+          return file;
+      } catch (_) {
+      }
+    }
+    return null;
+  }
+  async saveNotebookLMSeparateMarkdown(kind, id, notebookId, title, type, body) {
+    await this.ensureNotebookLMFolder("NotebookLM Imports");
+    const existing = await this.findNotebookLMSeparateMarkdown(kind, id);
+    const safeTitle = this.notebookLMSafeName(title);
+    const frontmatter = [
+      "---",
+      `notebooklm_${kind}_id: "${String(id).replace(/"/g, '\\"')}"`,
+      `notebooklm_notebook_id: "${String(notebookId || "").replace(/"/g, '\\"')}"`,
+      `notebooklm_type: "${String(type || kind).replace(/"/g, '\\"')}"`,
+      `notebooklm_title: "${String(title || "").replace(/"/g, '\\"')}"`,
+      `notebooklm_imported_at: "${(/* @__PURE__ */ new Date()).toISOString()}"`,
+      "---",
+      "",
+      `# ${title}`,
+      "",
+      body.trim(),
+      ""
+    ].join("\n");
+    if (existing) {
+      await this.app.vault.modify(existing, frontmatter);
+      return { file: existing, updated: true };
+    }
+    let path2 = `NotebookLM Imports/${safeTitle}.md`;
+    if (this.app.vault.getAbstractFileByPath(path2)) {
+      path2 = `NotebookLM Imports/${safeTitle}--${String(id).slice(0, 8)}.md`;
+    }
+    const file = await this.app.vault.create(path2, frontmatter);
+    return { file, updated: false };
+  }
+  notebookLMAssetExtension(type, url) {
+    const lowerType = String(type || "").toLowerCase();
+    const lowerUrl = String(url || "").toLowerCase().split("?")[0];
+    const match = lowerUrl.match(/\.(m4a|mp4|mp3|wav|ogg|png|jpg|jpeg|webp|pdf|pptx|csv)$/i);
+    if (match)
+      return match[1].toLowerCase();
+    if (lowerType.includes("audio"))
+      return "m4a";
+    if (lowerType.includes("video"))
+      return "mp4";
+    if (lowerType.includes("infographic"))
+      return "png";
+    if (lowerType.includes("slide"))
+      return "pdf";
+    if (lowerType.includes("data table"))
+      return "csv";
+    return "bin";
+  }
+  async downloadNotebookLMArtifact(url, title, type, artifactId, forcedExt) {
+    if (!url)
+      throw new Error("Artifact download URL is missing.");
+    await this.ensureNotebookLMFolder("NotebookLM Imports/assets");
+    const ext = forcedExt || this.notebookLMAssetExtension(type, url);
+    const safeTitle = this.notebookLMSafeName(title);
+    const idPart = String(artifactId || "artifact").slice(0, 10);
+    const path2 = `NotebookLM Imports/assets/${safeTitle}--${idPart}.${ext}`;
+    const response = await (0, import_obsidian.requestUrl)({ url, method: "GET" });
+    if (!response.arrayBuffer || response.status < 200 || response.status >= 300) {
+      throw new Error(`Artifact download failed: HTTP ${response.status}`);
+    }
+    const existing = this.app.vault.getAbstractFileByPath(path2);
+    if (existing instanceof import_obsidian.TFile)
+      await this.app.vault.modifyBinary(existing, response.arrayBuffer);
+    else
+      await this.app.vault.createBinary(path2, response.arrayBuffer);
+    const file = this.app.vault.getAbstractFileByPath(path2);
+    if (!(file instanceof import_obsidian.TFile))
+      throw new Error("Downloaded artifact could not be found in the vault.");
+    return file;
+  }
+  notebookLMEmbedForFile(file) {
+    const ext = file.extension.toLowerCase();
+    if (["m4a", "mp3", "wav", "ogg", "mp4", "png", "jpg", "jpeg", "webp", "pdf"].includes(ext))
+      return `![[${file.path}]]`;
+    return `[[${file.path}]]`;
+  }
+  showNotebookLMSaveDestinationModal(title, onAppend, onSeparate, onBack) {
+    const modal = new import_obsidian.Modal(this.app);
+    modal.modalEl.addClass("notebooklm-save-modal");
+    modal.titleEl.setText(title);
+    modal.contentEl.empty();
+    const navButtons = [];
+    const backButton = modal.contentEl.createEl("button", { cls: "notebooklm-back-button", text: "\u2190 Back" });
+    navButtons.push(backButton);
+    backButton.onclick = () => {
+      modal.close();
+      onBack();
+    };
+    modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Choose how to save this item in Obsidian." });
+    const options = modal.contentEl.createDiv({ cls: "notebooklm-save-options" });
+    const add = (icon, label, desc, action) => {
+      const button = options.createEl("button", { cls: "notebooklm-save-option" });
+      navButtons.push(button);
+      button.createDiv({ cls: "notebooklm-save-option-icon", text: icon });
+      const text = button.createDiv({ cls: "notebooklm-save-option-text" });
+      text.createDiv({ cls: "notebooklm-save-option-title", text: label });
+      text.createDiv({ cls: "notebooklm-save-option-desc", text: desc });
+      button.createDiv({ cls: "notebooklm-save-option-arrow", text: "\u203A" });
+      button.onclick = async () => {
+        modal.close();
+        await action();
+      };
+    };
+    add("\u21B3", "Append to current note", "Insert here. Re-importing the same ID updates the existing block.", onAppend);
+    add("\u{1F4C4}", "Save as separate file", "Create or update a dedicated file using the NotebookLM ID for deduplication.", onSeparate);
+    modal.open();
+    this.wireModalKeyboardNavigation(modal, navButtons, onBack);
+  }
   showNotebookLMSaveOptions() {
     const modal = new import_obsidian.Modal(this.app);
     modal.modalEl.addClass("notebooklm-save-modal");
@@ -816,7 +979,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     createOption("\u{1F4AC}", "Latest chat response", "Save the most recent NotebookLM answer.", async () => {
       await this.saveCurrentNotebookLMResponse();
     });
-    createOption("\u{1F4DD}", "NotebookLM notes", "Only notes created in this NotebookLM notebook.", async () => {
+    createOption("\u{1F4DD}", "NotebookLM notes", "Only actual NotebookLM notes.", async () => {
       await this.saveNotebookLMNoteToObsidian();
     });
     createOption("\u2728", "Other outputs", "Reports, audio/video, mind maps, quizzes, slide decks and other generated artifacts.", async () => {
@@ -1018,37 +1181,81 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
           const body = this.sanitizeNotebookLMText(String(item.content || ""));
           const downloadUrl = String(item.downloadUrl || "").trim();
           const pptxUrl = String(item.pptxUrl || "").trim();
-          if (!body && !downloadUrl && !pptxUrl) {
+          const artifactId = String(item.id || "").trim();
+          const notebookId = String((result == null ? void 0 : result.notebookId) || "").trim();
+          if (!artifactId || !body && !downloadUrl && !pptxUrl) {
             new import_obsidian.Notice(`${type} has no retrievable content or file, so nothing was imported.`);
             return;
           }
-          modal.close();
-          const current = await this.app.vault.read(targetFile);
-          const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
-          let block = `
-
-## NotebookLM Studio
+          const buildPayload = async () => {
+            const parts = [];
+            if (body)
+              parts.push(body);
+            if (downloadUrl) {
+              const file = await this.downloadNotebookLMArtifact(downloadUrl, title, type, artifactId);
+              parts.push(this.notebookLMEmbedForFile(file));
+            }
+            if (pptxUrl) {
+              const file = await this.downloadNotebookLMArtifact(pptxUrl, title, type, artifactId + "-pptx", "pptx");
+              parts.push(`[[${file.path}]]`);
+            }
+            return parts.join("\n\n");
+          };
+          this.showNotebookLMSaveDestinationModal(
+            title,
+            async () => {
+              try {
+                new import_obsidian.Notice(`Saving ${type} to Obsidian...`);
+                const payload = await buildPayload();
+                if (!payload.trim()) {
+                  new import_obsidian.Notice("Nothing retrievable was found for this output.");
+                  return;
+                }
+                const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
+                const block = `## NotebookLM Output
 
 ### ${title}
 
 **Type:** ${type}
 
 > Imported ${stamp}
-`;
-          if (body)
-            block += `
-${body}
-`;
-          if (downloadUrl)
-            block += `
-[Open/download artifact](${downloadUrl})
-`;
-          if (pptxUrl)
-            block += `
-[Download PPTX](${pptxUrl})
-`;
-          await this.app.vault.modify(targetFile, current + block);
-          new import_obsidian.Notice(`\u2705 ${type} saved to ${targetFile.basename}.`);
+
+${payload}`;
+                const mode = await this.upsertNotebookLMBlock(targetFile, "artifact", artifactId, block);
+                new import_obsidian.Notice(`\u2705 ${type} ${mode === "updated" ? "updated in" : "saved to"} ${targetFile.basename}.`);
+              } catch (error) {
+                new import_obsidian.Notice(`Artifact save failed: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            },
+            async () => {
+              try {
+                new import_obsidian.Notice(`Saving ${type} as a separate file...`);
+                if (body) {
+                  const payload = await buildPayload();
+                  const saved = await this.saveNotebookLMSeparateMarkdown("artifact", artifactId, notebookId, title, type, payload);
+                  new import_obsidian.Notice(`\u2705 ${saved.updated ? "Updated" : "Created"} ${saved.file.path}.`);
+                } else {
+                  let savedCount = 0;
+                  if (downloadUrl) {
+                    await this.downloadNotebookLMArtifact(downloadUrl, title, type, artifactId);
+                    savedCount++;
+                  }
+                  if (pptxUrl) {
+                    await this.downloadNotebookLMArtifact(pptxUrl, title, type, artifactId + "-pptx", "pptx");
+                    savedCount++;
+                  }
+                  if (!savedCount) {
+                    new import_obsidian.Notice("Nothing retrievable was found for this output.");
+                    return;
+                  }
+                  new import_obsidian.Notice(`\u2705 Saved ${savedCount} file${savedCount === 1 ? "" : "s"} in NotebookLM Imports/assets.`);
+                }
+              } catch (error) {
+                new import_obsidian.Notice(`Separate save failed: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            },
+            () => this.saveNotebookLMStudioOutputToObsidian()
+          );
         };
       }
       modal.open();
@@ -1161,27 +1368,34 @@ ${body}
         textWrap.createDiv({ cls: "notebooklm-note-title", text: String(note.title || "Untitled Note") });
         textWrap.createDiv({ cls: "notebooklm-note-kind", text: "NotebookLM note" });
         button.onclick = async () => {
-          const body = this.sanitizeNotebookLMText(String(note.content || ""));
-          if (!body) {
-            new import_obsidian.Notice("This NotebookLM note has no retrievable content, so nothing was imported.");
+          const noteId = String(note.id || "").trim();
+          const notebookId = String((result == null ? void 0 : result.notebookId) || "").trim();
+          const title = String(note.title || "Untitled Note").replace(/\n/g, " ");
+          const body = this.sanitizeNotebookLMText(String(note.content || "")).trim();
+          if (!noteId || !body) {
+            new import_obsidian.Notice("This NotebookLM note has no retrievable content.");
             return;
           }
-          modal.close();
-          const current = await this.app.vault.read(targetFile);
-          const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
-          const title = String(note.title || "Untitled Note").replace(/\n/g, " ");
-          const block = `
-
-## NotebookLM Notes
+          this.showNotebookLMSaveDestinationModal(
+            title,
+            async () => {
+              const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
+              const block = `## NotebookLM Note
 
 ### ${title}
 
 > Imported ${stamp}
 
-${body}
-`;
-          await this.app.vault.modify(targetFile, current + block);
-          new import_obsidian.Notice(`\u2705 NotebookLM note saved to ${targetFile.basename}.`);
+${body}`;
+              const mode = await this.upsertNotebookLMBlock(targetFile, "note", noteId, block);
+              new import_obsidian.Notice(`\u2705 NotebookLM note ${mode === "updated" ? "updated in" : "saved to"} ${targetFile.basename}.`);
+            },
+            async () => {
+              const saved = await this.saveNotebookLMSeparateMarkdown("note", noteId, notebookId, title, "note", body);
+              new import_obsidian.Notice(`\u2705 ${saved.updated ? "Updated" : "Created"} ${saved.file.path}.`);
+            },
+            () => this.saveNotebookLMNoteToObsidian()
+          );
         };
       }
       modal.open();
