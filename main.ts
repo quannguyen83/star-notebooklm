@@ -872,11 +872,113 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		const note = modal.contentEl.createEl('button', { text: 'NotebookLM note' });
 		note.style.width = '100%';
+		note.style.marginBottom = '10px';
 		note.onclick = async () => {
 			modal.close();
 			await this.saveNotebookLMNoteToObsidian();
 		};
+
+		const studio = modal.contentEl.createEl('button', { text: 'Studio output' });
+		studio.style.width = '100%';
+		studio.onclick = async () => {
+			modal.close();
+			await this.saveNotebookLMStudioOutputToObsidian();
+		};
 		modal.open();
+	}
+
+
+	async saveNotebookLMStudioOutputToObsidian() {
+		const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const targetFile = markdownView?.file;
+		if (!targetFile) {
+			new Notice('Open the Obsidian note you want to save into first.');
+			return;
+		}
+
+		const view = this.getNotebookLMView();
+		if (!view?.webview) {
+			new Notice('NotebookLM panel is not available.');
+			return;
+		}
+
+		new Notice('Scanning NotebookLM Studio outputs...');
+		try {
+			const outputs = await view.webview.executeJavaScript(`
+				(function() {
+					const typeWords = [
+						'audio overview','video overview','mind map','report','study guide','briefing doc','faq','timeline',
+						'flashcard','flashcards','quiz','slide deck','infographic','data table',
+						'audio-übersicht','video-übersicht','mindmap','bericht','lernleitfaden','quiz',
+						'오디오','비디오','마인드맵','보고서','학습 가이드','퀴즈','플래시카드'
+					];
+					function clean(text) { return String(text || '').replace(/\\s+/g, ' ').trim(); }
+					function detectType(text) {
+						const lower = clean(text).toLowerCase();
+						for (const word of typeWords) if (lower.includes(word.toLowerCase())) return word;
+						return '';
+					}
+					const selectors = [
+						'[class*="studio"] [role="button"]','[class*="studio"] mat-card','[class*="studio"] button',
+						'[class*="artifact"]','[class*="output"]','[data-testid*="studio"]','[data-testid*="artifact"]'
+					];
+					const seen = new Set();
+					const results = [];
+					function addElement(el) {
+						const text = clean(el.innerText || el.textContent || '');
+						if (!text || text.length < 3 || text.length > 12000) return;
+						const type = detectType(text);
+						if (!type) return;
+						const titleEl = el.querySelector('h1,h2,h3,h4,[class*="title"],[aria-label]');
+						let title = clean(titleEl?.textContent || titleEl?.getAttribute?.('aria-label') || '');
+						if (!title) title = text.slice(0, 120);
+						const anchor = el.closest('a[href]') || el.querySelector('a[href]');
+						const href = anchor ? anchor.href : '';
+						const key = type + '|' + title + '|' + href;
+						if (seen.has(key)) return;
+						seen.add(key);
+						results.push({ type, title, text, href });
+					}
+					for (const selector of selectors) for (const el of Array.from(document.querySelectorAll(selector))) addElement(el);
+					if (!results.length) for (const el of Array.from(document.querySelectorAll('button,[role="button"],mat-card,a'))) addElement(el);
+					return results;
+				})();
+			`);
+
+			const items = Array.isArray(outputs) ? outputs : [];
+			if (!items.length) {
+				new Notice('No Studio outputs found. Open the Studio panel in NotebookLM and try again.');
+				return;
+			}
+
+			const modal = new Modal(this.app);
+			modal.titleEl.setText('Choose Studio output');
+			modal.contentEl.empty();
+			for (const item of items) {
+				const label = `${String(item.type || 'Studio')} — ${String(item.title || 'Untitled')}`;
+				const button = modal.contentEl.createEl('button', { text: label });
+				button.style.width = '100%';
+				button.style.marginBottom = '8px';
+				button.onclick = async () => {
+					modal.close();
+					const current = await this.app.vault.read(targetFile);
+					const stamp = new Date().toLocaleString();
+					const type = String(item.type || 'Studio output');
+					const title = String(item.title || 'Untitled').replace(/\\n/g, ' ');
+					const href = String(item.href || '').trim();
+					const body = String(item.text || '').trim();
+					let block = `\\n\\n## NotebookLM Studio\\n\\n### ${title}\\n\\n**Type:** ${type}\\n\\n> Imported ${stamp}\\n`;
+					if (href) block += `\\n[Open in NotebookLM](${href})\\n`;
+					if (body) block += `\\n${body}\\n`;
+					await this.app.vault.modify(targetFile, current + block);
+					new Notice(`✅ ${type} saved to ${targetFile.basename}.`);
+				};
+			}
+			modal.open();
+		} catch (error) {
+			console.error('[Star NotebookLM] Studio output save failed:', error);
+			new Notice(`Studio output save failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
 	}
 
 	async saveNotebookLMNoteToObsidian() {
