@@ -927,6 +927,31 @@ export default class StarNotebookLMPlugin extends Plugin {
 							.replace(/\s+/g, ' ')
 							.trim();
 					}
+					function contentText(el) {
+						if (!el) return '';
+						const clone = el.cloneNode(true);
+						for (const icon of Array.from(clone.querySelectorAll('mat-icon,.mat-icon,.material-icons,.material-icons-outlined,.material-symbols-outlined,.material-symbols-rounded,.material-symbols-sharp,[class*="material-symbol"],[class*="material-icon"],[aria-hidden="true"]'))) {
+							icon.remove();
+						}
+						return clean(clone.innerText || clone.textContent || '');
+					}
+					function canonicalType(type) {
+						const t = String(type || '').toLowerCase();
+						if (t.includes('audio')) return 'Audio Overview';
+						if (t.includes('video')) return 'Video Overview';
+						if (t.includes('mind')) return 'Mind Map';
+						if (t.includes('slide')) return 'Slide Deck';
+						if (t.includes('infographic')) return 'Infographic';
+						if (t.includes('data table')) return 'Data Table';
+						if (t.includes('flashcard')) return 'Flashcards';
+						if (t.includes('quiz')) return 'Quiz';
+						if (t.includes('study guide')) return 'Study Guide';
+						if (t.includes('briefing')) return 'Briefing Doc';
+						if (t.includes('faq')) return 'FAQ';
+						if (t.includes('timeline')) return 'Timeline';
+						if (t.includes('report')) return 'Report';
+						return clean(type) || 'Studio output';
+					}
 					function detectType(text) {
 						const lower = clean(text).toLowerCase();
 						for (const word of typeWords) if (lower.includes(word.toLowerCase())) return word;
@@ -939,16 +964,17 @@ export default class StarNotebookLMPlugin extends Plugin {
 					const seen = new Set();
 					const results = [];
 					function addElement(el) {
-						const text = clean(el.innerText || el.textContent || '');
+						const text = contentText(el);
 						if (!text || text.length < 3 || text.length > 12000) return;
-						const type = detectType(text);
-						if (!type) return;
-						const titleEl = el.querySelector('h1,h2,h3,h4,[class*="title"],[aria-label]');
-						let title = clean(titleEl?.textContent || titleEl?.getAttribute?.('aria-label') || '');
-						if (!title) title = text.slice(0, 120);
+						const detected = detectType(text);
+						if (!detected) return;
+						const type = canonicalType(detected);
+						const titleEl = el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="name"]');
+						let title = contentText(titleEl);
+						if (!title || title.length > 100 || detectType(title)) title = type;
 						const anchor = el.closest('a[href]') || el.querySelector('a[href]');
 						const href = anchor ? anchor.href : '';
-						const key = type + '|' + title + '|' + href;
+						const key = type.toLowerCase() + '|' + title.toLowerCase() + '|' + href;
 						if (seen.has(key)) return;
 						seen.add(key);
 						results.push({ type, title, text, href });
