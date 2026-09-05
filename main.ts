@@ -945,117 +945,159 @@ export default class StarNotebookLMPlugin extends Plugin {
 			return;
 		}
 
-		new Notice('Scanning NotebookLM Studio outputs...');
+		new Notice('Loading available NotebookLM artifacts...');
 		try {
-			const outputs = await view.webview.executeJavaScript(`
-				(function() {
-					const typeWords = [
-						'audio overview','video overview','mind map','report','study guide','briefing doc','faq','timeline',
-						'flashcard','flashcards','quiz','slide deck','infographic','data table',
-						'audio-übersicht','video-übersicht','mindmap','bericht','lernleitfaden','quiz',
-						'오디오','비디오','마인드맵','보고서','학습 가이드','퀴즈','플래시카드'
-					];
-					function clean(text) {
-						const iconTokens = /\b(?:chevron_forward|chevron_right|chevron_left|expand_more|expand_less|more_vert|more_horiz|play_arrow|pause|stop|close|menu|search|download|upload|refresh|add|remove|edit|delete|content_copy|copy_all|open_in_new|arrow_forward|arrow_back|keyboard_arrow_right|keyboard_arrow_left|keyboard_arrow_down|keyboard_arrow_up|unfold_more|unfold_less)\b/gi;
-						return String(text || '')
-							.replace(iconTokens, ' ')
-							.replace(/\s+/g, ' ')
-							.trim();
+			const result = await view.webview.executeJavaScript(`
+				(async function() {
+					const match = window.location.pathname.match(/\\/notebook\\/([^/]+)/);
+					const notebookId = match ? match[1] : null;
+					if (!notebookId) return { error: 'Open a NotebookLM notebook first.' };
+
+					let atToken = null;
+					for (const script of document.querySelectorAll('script')) {
+						const m = (script.textContent || '').match(/"SNlM0e":"([^"]+)"/);
+						if (m) { atToken = m[1]; break; }
 					}
-					function contentText(el) {
-						if (!el) return '';
-						const clone = el.cloneNode(true);
-						for (const icon of Array.from(clone.querySelectorAll('mat-icon,.mat-icon,.material-icons,.material-icons-outlined,.material-symbols-outlined,.material-symbols-rounded,.material-symbols-sharp,[class*="material-symbol"],[class*="material-icon"],[aria-hidden="true"]'))) {
-							icon.remove();
+					if (!atToken && window.WIZ_global_data && window.WIZ_global_data.SNlM0e) atToken = window.WIZ_global_data.SNlM0e;
+					if (!atToken) return { error: 'NotebookLM authentication token was not found.' };
+
+					async function rpc(rpcId, params) {
+						const form = new URLSearchParams();
+						form.append('at', atToken);
+						form.append('f.req', JSON.stringify([[[rpcId, JSON.stringify(params), null, 'generic']]]));
+						const response = await fetch('/_/LabsTailwindUi/data/batchexecute?rpcids=' + rpcId + '&source-path=' + encodeURIComponent('/notebook/' + notebookId), {
+							method: 'POST', credentials: 'include',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-Same-Domain': '1' },
+							body: form.toString()
+						});
+						if (!response.ok) throw new Error(rpcId + ' failed: HTTP ' + response.status);
+						const text = await response.text();
+						for (const line of text.split('\\n')) {
+							if (!line || line.startsWith(")]}'")) continue;
+							try {
+								const parsed = JSON.parse(line);
+								for (const row of (Array.isArray(parsed) ? parsed : [])) {
+									if (Array.isArray(row) && row[0] === 'wrb.fr' && row[1] === rpcId && typeof row[2] === 'string') return JSON.parse(row[2]);
+								}
+							} catch (_) {}
 						}
-						return clean(clone.innerText || clone.textContent || '');
+						return null;
 					}
-					function canonicalType(type) {
-						const t = String(type || '').toLowerCase();
-						if (t.includes('audio')) return 'Audio Overview';
-						if (t.includes('video')) return 'Video Overview';
-						if (t.includes('mind')) return 'Mind Map';
-						if (t.includes('slide')) return 'Slide Deck';
-						if (t.includes('infographic')) return 'Infographic';
-						if (t.includes('data table')) return 'Data Table';
-						if (t.includes('flashcard')) return 'Flashcards';
-						if (t.includes('quiz')) return 'Quiz';
-						if (t.includes('study guide')) return 'Study Guide';
-						if (t.includes('briefing')) return 'Briefing Doc';
-						if (t.includes('faq')) return 'FAQ';
-						if (t.includes('timeline')) return 'Timeline';
-						if (t.includes('report')) return 'Report';
-						return clean(type) || 'Studio output';
-					}
-					function detectType(text) {
-						const lower = clean(text).toLowerCase();
-						for (const word of typeWords) if (lower.includes(word.toLowerCase())) return word;
+
+					function findMediaUrl(node, mime) {
+						if (!Array.isArray(node)) return '';
+						if (node.length > 2 && typeof node[0] === 'string' && node[0].startsWith('http') && node[2] === mime) return node[0];
+						for (const child of node) {
+							const found = findMediaUrl(child, mime);
+							if (found) return found;
+						}
 						return '';
 					}
-					const selectors = [
-						'[class*="studio"] [role="button"]','[class*="studio"] mat-card','[class*="studio"] button',
-						'[class*="artifact"]','[class*="output"]','[data-testid*="studio"]','[data-testid*="artifact"]'
-					];
-					const seen = new Set();
-					const results = [];
-					function addElement(el) {
-						const text = contentText(el);
-						if (!text || text.length < 3 || text.length > 12000) return;
-						const detected = detectType(text);
-						if (!detected) return;
-						const type = canonicalType(detected);
-						const titleEl = el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="name"]');
-						let title = contentText(titleEl);
-						if (!title || title.length > 100 || detectType(title)) title = type;
-						const anchor = el.closest('a[href]') || el.querySelector('a[href]');
-						const href = anchor ? anchor.href : '';
-						const key = type.toLowerCase() + '|' + title.toLowerCase() + '|' + href;
-						if (seen.has(key)) return;
-						seen.add(key);
-						results.push({ type, title, text, href });
+
+					function dataTableCsv(art) {
+						try {
+							const table = art[18][0][0][0][0][4][2];
+							if (!Array.isArray(table) || !table.length) return '';
+							const quote = value => {
+								const s = String(value == null ? '' : value);
+								return /[",\\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+							};
+							return table.map(row => (Array.isArray(row) ? row : []).map(cell => quote(Array.isArray(cell) ? cell[0] : cell)).join(',')).join('\\n');
+						} catch (_) { return ''; }
 					}
-					for (const selector of selectors) for (const el of Array.from(document.querySelectorAll(selector))) addElement(el);
-					if (!results.length) for (const el of Array.from(document.querySelectorAll('button,[role="button"],mat-card,a'))) addElement(el);
-					return results;
-				})();
+
+					function parseArtifact(art) {
+						if (!Array.isArray(art) || typeof art[0] !== 'string') return null;
+						const id = art[0];
+						const title = typeof art[1] === 'string' && art[1].trim() ? art[1].trim() : 'Untitled';
+						const typeCode = Number(art[2] || 0);
+						const statusCode = Number(art[4] || 0);
+						if (statusCode !== 3) return null;
+						let variant = 0;
+						try { variant = Number(art[9][1][0] || 0); } catch (_) {}
+						let type = 'Studio Output';
+						if (typeCode === 1) type = 'Audio Overview';
+						else if (typeCode === 2) type = 'Report';
+						else if (typeCode === 3) type = 'Video Overview';
+						else if (typeCode === 4 && variant === 2) type = 'Quiz';
+						else if (typeCode === 4 && variant === 4) type = 'Mind Map';
+						else if (typeCode === 4) type = 'Flashcards';
+						else if (typeCode === 5) type = 'Mind Map';
+						else if (typeCode === 7) type = 'Infographic';
+						else if (typeCode === 8) type = 'Slide Deck';
+						else if (typeCode === 9) type = 'Data Table';
+
+						let content = '';
+						let downloadUrl = '';
+						let pptxUrl = '';
+						try {
+							if (typeCode === 1) {
+								downloadUrl = findMediaUrl(art[6] && art[6][5], 'audio/mp4');
+							} else if (typeCode === 2) {
+								if (art[7] && typeof art[7][0] === 'string') content = art[7][0];
+							} else if (typeCode === 3) {
+								downloadUrl = findMediaUrl(art[8], 'video/mp4');
+							} else if (typeCode === 4) {
+								if (art[9] && typeof art[9][0] === 'string' && art[9][0].trim()) content = art[9][0];
+							} else if (typeCode === 7) {
+								const url = art[14] && art[14][2] && art[14][2][0] && art[14][2][0][1] && art[14][2][0][1][0];
+								if (typeof url === 'string' && url.startsWith('http')) downloadUrl = url;
+							} else if (typeCode === 8) {
+								if (art[16] && typeof art[16][3] === 'string' && art[16][3].startsWith('http')) downloadUrl = art[16][3];
+								if (art[16] && typeof art[16][4] === 'string' && art[16][4].startsWith('http')) pptxUrl = art[16][4];
+							} else if (typeCode === 9) {
+								content = dataTableCsv(art);
+							}
+						} catch (_) {}
+						return { id, title, type, typeCode, statusCode, content, downloadUrl, pptxUrl };
+					}
+
+					const listData = await rpc('gArtLc', [[2], notebookId, 'NOT artifact.status = "ARTIFACT_STATUS_SUGGESTED"']);
+					const rawArtifacts = listData && Array.isArray(listData[0]) ? listData[0] : [];
+					const available = [];
+					for (const raw of rawArtifacts) {
+						let item = parseArtifact(raw);
+						if (!item) continue;
+						if (!item.content && !item.downloadUrl && !item.pptxUrl) {
+							try {
+								const detail = await rpc('v9rmvd', [item.id, [2]]);
+								const detailRaw = detail && Array.isArray(detail[0]) ? detail[0] : null;
+								const detailed = parseArtifact(detailRaw);
+								if (detailed) item = detailed;
+							} catch (_) {}
+						}
+						if (!item.content && !item.downloadUrl && !item.pptxUrl) continue;
+						available.push(item);
+					}
+					return { notebookId, artifacts: available };
+				})()
 			`);
 
-			const items = Array.isArray(outputs) ? outputs : [];
+			if (result?.error) { new Notice(result.error); return; }
+			const items = Array.isArray(result?.artifacts) ? result.artifacts : [];
 			if (!items.length) {
-				new Notice('No Studio outputs found. Open the Studio panel in NotebookLM and try again.');
+				new Notice('No completed Studio artifacts with retrievable content or files were found.');
 				return;
 			}
 
 			const modal = new Modal(this.app);
 			modal.modalEl.addClass('notebooklm-save-modal');
-			modal.titleEl.setText('Choose Studio output');
+			modal.titleEl.setText('Choose available Studio artifact');
 			modal.contentEl.empty();
 			const navButtons: HTMLButtonElement[] = [];
 			const backButton = modal.contentEl.createEl('button', { cls: 'notebooklm-back-button', text: '← Back' });
 			navButtons.push(backButton);
 			backButton.onclick = () => { modal.close(); this.showNotebookLMSaveOptions(); };
-			modal.contentEl.createEl('p', { cls: 'notebooklm-save-subtitle', text: 'Select an item to append to the current Obsidian note.' });
+			modal.contentEl.createEl('p', { cls: 'notebooklm-save-subtitle', text: 'Only completed artifacts with real content or a downloadable file are shown.' });
 			const list = modal.contentEl.createDiv({ cls: 'notebooklm-studio-list' });
 			const studioDisplay = (rawType: unknown) => {
-				const key = String(rawType || '').toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-				const entries: Array<[string[], string, string]> = [
-					[['audio overview', 'audio übersicht', '오디오'], '🎧', 'Audio Overview'],
-					[['video overview', 'video übersicht', '비디오'], '🎬', 'Video Overview'],
-					[['mind map', 'mindmap', '마인드맵'], '🧠', 'Mind Map'],
-					[['slide deck'], '🖥️', 'Slide Deck'],
-					[['infographic'], '📊', 'Infographic'],
-					[['data table'], '▦', 'Data Table'],
-					[['flashcard', 'flashcards', '플래시카드'], '🗂️', 'Flashcards'],
-					[['quiz', '퀴즈'], '✓', 'Quiz'],
-					[['study guide', 'lernleitfaden', '학습 가이드'], '📚', 'Study Guide'],
-					[['briefing doc'], '📝', 'Briefing Doc'],
-					[['faq'], '❓', 'FAQ'],
-					[['timeline'], '🕒', 'Timeline'],
-					[['report', 'bericht', '보고서'], '📄', 'Report']
+				const key = String(rawType || '').toLowerCase();
+				const entries: Array<[string, string, string]> = [
+					['audio', '🎧', 'Audio Overview'], ['video', '🎬', 'Video Overview'], ['mind', '🧠', 'Mind Map'],
+					['slide', '🖥️', 'Slide Deck'], ['infographic', '📊', 'Infographic'], ['data table', '▦', 'Data Table'],
+					['flashcard', '🗂️', 'Flashcards'], ['quiz', '✓', 'Quiz'], ['report', '📄', 'Report']
 				];
-				for (const [aliases, icon, title] of entries) {
-					if (aliases.some(alias => key.includes(alias))) return { icon, title };
-				}
+				for (const [alias, icon, title] of entries) if (key.includes(alias)) return { icon, title };
 				return { icon: '✨', title: 'Studio Output' };
 			};
 
@@ -1064,18 +1106,26 @@ export default class StarNotebookLMPlugin extends Plugin {
 				navButtons.push(button);
 				const display = studioDisplay(item.type);
 				button.createDiv({ cls: 'notebooklm-studio-icon', text: display.icon });
-				button.createDiv({ cls: 'notebooklm-studio-title', text: display.title });
+				const textWrap = button.createDiv({ cls: 'notebooklm-note-text' });
+				textWrap.createDiv({ cls: 'notebooklm-studio-title', text: String(item.title || display.title) });
+				textWrap.createDiv({ cls: 'notebooklm-note-kind', text: display.title });
 				button.onclick = async () => {
+					const type = String(item.type || 'Studio output');
+					const title = this.sanitizeNotebookLMText(String(item.title || display.title)).replace(/\n/g, ' ');
+					const body = this.sanitizeNotebookLMText(String(item.content || ''));
+					const downloadUrl = String(item.downloadUrl || '').trim();
+					const pptxUrl = String(item.pptxUrl || '').trim();
+					if (!body && !downloadUrl && !pptxUrl) {
+						new Notice(`${type} has no retrievable content or file, so nothing was imported.`);
+						return;
+					}
 					modal.close();
 					const current = await this.app.vault.read(targetFile);
 					const stamp = new Date().toLocaleString();
-					const type = String(item.type || 'Studio output');
-					const title = this.sanitizeNotebookLMText(String(item.title || 'Untitled')).replace(/\\n/g, ' ');
-					const href = String(item.href || '').trim();
-					const body = this.sanitizeNotebookLMText(String(item.text || ''));
-					let block = `\\n\\n## NotebookLM Studio\\n\\n### ${title}\\n\\n**Type:** ${type}\\n\\n> Imported ${stamp}\\n`;
-					if (href) block += `\\n[Open in NotebookLM](${href})\\n`;
-					if (body) block += `\\n${body}\\n`;
+					let block = `\n\n## NotebookLM Studio\n\n### ${title}\n\n**Type:** ${type}\n\n> Imported ${stamp}\n`;
+					if (body) block += `\n${body}\n`;
+					if (downloadUrl) block += `\n[Open/download artifact](${downloadUrl})\n`;
+					if (pptxUrl) block += `\n[Download PPTX](${pptxUrl})\n`;
 					await this.app.vault.modify(targetFile, current + block);
 					new Notice(`✅ ${type} saved to ${targetFile.basename}.`);
 				};
@@ -1083,8 +1133,8 @@ export default class StarNotebookLMPlugin extends Plugin {
 			modal.open();
 			this.wireModalKeyboardNavigation(modal, navButtons, () => this.showNotebookLMSaveOptions());
 		} catch (error) {
-			console.error('[Star NotebookLM] Studio output save failed:', error);
-			new Notice(`Studio output save failed: ${error instanceof Error ? error.message : String(error)}`);
+			console.error('[Star NotebookLM] Studio artifact save failed:', error);
+			new Notice(`Studio artifact load failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
