@@ -912,7 +912,13 @@ export default class StarNotebookLMPlugin extends Plugin {
 						'audio-übersicht','video-übersicht','mindmap','bericht','lernleitfaden','quiz',
 						'오디오','비디오','마인드맵','보고서','학습 가이드','퀴즈','플래시카드'
 					];
-					function clean(text) { return String(text || '').replace(/\\s+/g, ' ').trim(); }
+					function clean(text) {
+						const iconTokens = /\b(?:chevron_forward|chevron_right|chevron_left|expand_more|expand_less|more_vert|more_horiz|play_arrow|pause|stop|close|menu|search|download|upload|refresh|add|remove|edit|delete|content_copy|copy_all|open_in_new|arrow_forward|arrow_back|keyboard_arrow_right|keyboard_arrow_left|keyboard_arrow_down|keyboard_arrow_up|unfold_more|unfold_less)\b/gi;
+						return String(text || '')
+							.replace(iconTokens, ' ')
+							.replace(/\s+/g, ' ')
+							.trim();
+					}
 					function detectType(text) {
 						const lower = clean(text).toLowerCase();
 						for (const word of typeWords) if (lower.includes(word.toLowerCase())) return word;
@@ -964,9 +970,9 @@ export default class StarNotebookLMPlugin extends Plugin {
 					const current = await this.app.vault.read(targetFile);
 					const stamp = new Date().toLocaleString();
 					const type = String(item.type || 'Studio output');
-					const title = String(item.title || 'Untitled').replace(/\\n/g, ' ');
+					const title = this.sanitizeNotebookLMText(String(item.title || 'Untitled')).replace(/\\n/g, ' ');
 					const href = String(item.href || '').trim();
-					const body = String(item.text || '').trim();
+					const body = this.sanitizeNotebookLMText(String(item.text || ''));
 					let block = `\\n\\n## NotebookLM Studio\\n\\n### ${title}\\n\\n**Type:** ${type}\\n\\n> Imported ${stamp}\\n`;
 					if (href) block += `\\n[Open in NotebookLM](${href})\\n`;
 					if (body) block += `\\n${body}\\n`;
@@ -1073,7 +1079,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 					const current = await this.app.vault.read(targetFile);
 					const stamp = new Date().toLocaleString();
 					const title = String(note.title || 'Untitled Note').replace(/\n/g, ' ');
-					const block = `\n\n## NotebookLM Notes\n\n### ${title}\n\n> Imported ${stamp}\n\n${String(note.content || '').trim()}\n`;
+					const block = `\n\n## NotebookLM Notes\n\n### ${title}\n\n> Imported ${stamp}\n\n${this.sanitizeNotebookLMText(String(note.content || ''))}\n`;
 					await this.app.vault.modify(targetFile, current + block);
 					new Notice(`✅ NotebookLM note saved to ${targetFile.basename}.`);
 				};
@@ -1083,6 +1089,18 @@ export default class StarNotebookLMPlugin extends Plugin {
 			console.error('[Star NotebookLM] NotebookLM note import failed:', error);
 			new Notice(`NotebookLM note import failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
+	}
+
+
+	sanitizeNotebookLMText(text: string): string {
+		const iconTokens = /\b(?:chevron_forward|chevron_right|chevron_left|expand_more|expand_less|more_vert|more_horiz|play_arrow|pause|stop|close|menu|search|download|upload|refresh|add|remove|edit|delete|content_copy|copy_all|open_in_new|arrow_forward|arrow_back|keyboard_arrow_right|keyboard_arrow_left|keyboard_arrow_down|keyboard_arrow_up|unfold_more|unfold_less)\b/gi;
+		return String(text || '')
+			.replace(iconTokens, ' ')
+			.replace(/[ \t]+\n/g, '\n')
+			.replace(/\n[ \t]+/g, '\n')
+			.replace(/[ \t]{2,}/g, ' ')
+			.replace(/\n{3,}/g, '\n\n')
+			.trim();
 	}
 
 	async saveCurrentNotebookLMResponse() {
@@ -1137,7 +1155,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 			const current = await this.app.vault.read(targetFile);
 			const stamp = new Date().toLocaleString();
-			const block = `\n\n## NotebookLM Notes\n\n### ${stamp}\n\n${String(responseText).trim()}\n`;
+			const block = `\n\n## NotebookLM Notes\n\n### ${stamp}\n\n${this.sanitizeNotebookLMText(String(responseText))}\n`;
 			await this.app.vault.modify(targetFile, current + block);
 			new Notice(`✅ NotebookLM response saved to ${targetFile.basename}.`);
 		} catch (error) {

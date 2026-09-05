@@ -803,7 +803,13 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						'audio-\xFCbersicht','video-\xFCbersicht','mindmap','bericht','lernleitfaden','quiz',
 						'\uC624\uB514\uC624','\uBE44\uB514\uC624','\uB9C8\uC778\uB4DC\uB9F5','\uBCF4\uACE0\uC11C','\uD559\uC2B5 \uAC00\uC774\uB4DC','\uD034\uC988','\uD50C\uB798\uC2DC\uCE74\uB4DC'
 					];
-					function clean(text) { return String(text || '').replace(/\\s+/g, ' ').trim(); }
+					function clean(text) {
+						const iconTokens = /\b(?:chevron_forward|chevron_right|chevron_left|expand_more|expand_less|more_vert|more_horiz|play_arrow|pause|stop|close|menu|search|download|upload|refresh|add|remove|edit|delete|content_copy|copy_all|open_in_new|arrow_forward|arrow_back|keyboard_arrow_right|keyboard_arrow_left|keyboard_arrow_down|keyboard_arrow_up|unfold_more|unfold_less)\b/gi;
+						return String(text || '')
+							.replace(iconTokens, ' ')
+							.replace(/s+/g, ' ')
+							.trim();
+					}
 					function detectType(text) {
 						const lower = clean(text).toLowerCase();
 						for (const word of typeWords) if (lower.includes(word.toLowerCase())) return word;
@@ -853,9 +859,9 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
           const current = await this.app.vault.read(targetFile);
           const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
           const type = String(item.type || "Studio output");
-          const title = String(item.title || "Untitled").replace(/\\n/g, " ");
+          const title = this.sanitizeNotebookLMText(String(item.title || "Untitled")).replace(/\\n/g, " ");
           const href = String(item.href || "").trim();
-          const body = String(item.text || "").trim();
+          const body = this.sanitizeNotebookLMText(String(item.text || ""));
           let block = `\\n\\n## NotebookLM Studio\\n\\n### ${title}\\n\\n**Type:** ${type}\\n\\n> Imported ${stamp}\\n`;
           if (href)
             block += `\\n[Open in NotebookLM](${href})\\n`;
@@ -973,7 +979,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 
 > Imported ${stamp}
 
-${String(note.content || "").trim()}
+${this.sanitizeNotebookLMText(String(note.content || ""))}
 `;
           await this.app.vault.modify(targetFile, current + block);
           new import_obsidian.Notice(`\u2705 NotebookLM note saved to ${targetFile.basename}.`);
@@ -984,6 +990,10 @@ ${String(note.content || "").trim()}
       console.error("[Star NotebookLM] NotebookLM note import failed:", error);
       new import_obsidian.Notice(`NotebookLM note import failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  sanitizeNotebookLMText(text) {
+    const iconTokens = /\b(?:chevron_forward|chevron_right|chevron_left|expand_more|expand_less|more_vert|more_horiz|play_arrow|pause|stop|close|menu|search|download|upload|refresh|add|remove|edit|delete|content_copy|copy_all|open_in_new|arrow_forward|arrow_back|keyboard_arrow_right|keyboard_arrow_left|keyboard_arrow_down|keyboard_arrow_up|unfold_more|unfold_less)\b/gi;
+    return String(text || "").replace(iconTokens, " ").replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   }
   async saveCurrentNotebookLMResponse() {
     const markdownView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
@@ -1039,7 +1049,7 @@ ${String(note.content || "").trim()}
 
 ### ${stamp}
 
-${String(responseText).trim()}
+${this.sanitizeNotebookLMText(String(responseText))}
 `;
       await this.app.vault.modify(targetFile, current + block);
       new import_obsidian.Notice(`\u2705 NotebookLM response saved to ${targetFile.basename}.`);
