@@ -895,20 +895,70 @@ ${wrapped}
   async downloadNotebookLMArtifact(url, title, type, artifactId, forcedExt) {
     if (!url)
       throw new Error("Artifact download URL is missing.");
+    const view = this.getNotebookLMView();
+    if (!(view == null ? void 0 : view.webview))
+      throw new Error("NotebookLM panel is not available for authenticated download.");
     await this.ensureNotebookLMFolder("NotebookLM Imports/assets");
     const ext = forcedExt || this.notebookLMAssetExtension(type, url);
     const safeTitle = this.notebookLMSafeName(title);
     const idPart = String(artifactId || "artifact").slice(0, 10);
     const path2 = `NotebookLM Imports/assets/${safeTitle}--${idPart}.${ext}`;
-    const response = await (0, import_obsidian.requestUrl)({ url, method: "GET" });
-    if (!response.arrayBuffer || response.status < 200 || response.status >= 300) {
-      throw new Error(`Artifact download failed: HTTP ${response.status}`);
+    const sourceUrl = JSON.stringify(url);
+    const init = await view.webview.executeJavaScript(`
+			(async function() {
+				try {
+					const response = await fetch(${sourceUrl}, { method: 'GET', credentials: 'include' });
+					if (!response.ok) return { ok: false, status: response.status, statusText: response.statusText };
+					const bytes = new Uint8Array(await response.arrayBuffer());
+					window.__obsidianNotebookLMArtifactBytes = bytes;
+					return { ok: true, length: bytes.length };
+				} catch (error) {
+					return { ok: false, status: 0, statusText: error instanceof Error ? error.message : String(error) };
+				}
+			})()
+		`);
+    if (!(init == null ? void 0 : init.ok)) {
+      throw new Error(`Artifact download failed in NotebookLM session: HTTP ${(init == null ? void 0 : init.status) || 0} ${(init == null ? void 0 : init.statusText) || ""}`.trim());
+    }
+    const total = Number(init.length || 0);
+    if (!Number.isFinite(total) || total <= 0) {
+      throw new Error("Artifact download returned an empty file.");
+    }
+    const bytes = new Uint8Array(total);
+    const chunkSize = 512 * 1024;
+    try {
+      for (let offset = 0; offset < total; offset += chunkSize) {
+        const end = Math.min(total, offset + chunkSize);
+        const base64 = await view.webview.executeJavaScript(`
+					(function() {
+						const bytes = window.__obsidianNotebookLMArtifactBytes;
+						if (!bytes) return '';
+						const slice = bytes.subarray(${offset}, ${end});
+						let binary = '';
+						const step = 0x8000;
+						for (let i = 0; i < slice.length; i += step) {
+							binary += String.fromCharCode(...slice.subarray(i, Math.min(i + step, slice.length)));
+						}
+						return btoa(binary);
+					})()
+				`);
+        if (!base64)
+          throw new Error("Artifact download chunk could not be read from NotebookLM session.");
+        const binary = atob(String(base64));
+        for (let i = 0; i < binary.length; i++)
+          bytes[offset + i] = binary.charCodeAt(i);
+      }
+    } finally {
+      try {
+        await view.webview.executeJavaScript("window.__obsidianNotebookLMArtifactBytes = null;");
+      } catch (_) {
+      }
     }
     const existing = this.app.vault.getAbstractFileByPath(path2);
     if (existing instanceof import_obsidian.TFile)
-      await this.app.vault.modifyBinary(existing, response.arrayBuffer);
+      await this.app.vault.modifyBinary(existing, bytes.buffer);
     else
-      await this.app.vault.createBinary(path2, response.arrayBuffer);
+      await this.app.vault.createBinary(path2, bytes.buffer);
     const file = this.app.vault.getAbstractFileByPath(path2);
     if (!(file instanceof import_obsidian.TFile))
       throw new Error("Downloaded artifact could not be found in the vault.");
