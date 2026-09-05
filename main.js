@@ -884,16 +884,34 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       modal.contentEl.empty();
       modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Select an item to append to the current Obsidian note." });
       const list = modal.contentEl.createDiv({ cls: "notebooklm-studio-list" });
+      const studioDisplay = (rawType) => {
+        const key = String(rawType || "").toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+        const entries = [
+          [["audio overview", "audio \xFCbersicht", "\uC624\uB514\uC624"], "\u{1F3A7}", "Audio Overview"],
+          [["video overview", "video \xFCbersicht", "\uBE44\uB514\uC624"], "\u{1F3AC}", "Video Overview"],
+          [["mind map", "mindmap", "\uB9C8\uC778\uB4DC\uB9F5"], "\u{1F9E0}", "Mind Map"],
+          [["slide deck"], "\u{1F5A5}\uFE0F", "Slide Deck"],
+          [["infographic"], "\u{1F4CA}", "Infographic"],
+          [["data table"], "\u25A6", "Data Table"],
+          [["flashcard", "flashcards", "\uD50C\uB798\uC2DC\uCE74\uB4DC"], "\u{1F5C2}\uFE0F", "Flashcards"],
+          [["quiz", "\uD034\uC988"], "\u2713", "Quiz"],
+          [["study guide", "lernleitfaden", "\uD559\uC2B5 \uAC00\uC774\uB4DC"], "\u{1F4DA}", "Study Guide"],
+          [["briefing doc"], "\u{1F4DD}", "Briefing Doc"],
+          [["faq"], "\u2753", "FAQ"],
+          [["timeline"], "\u{1F552}", "Timeline"],
+          [["report", "bericht", "\uBCF4\uACE0\uC11C"], "\u{1F4C4}", "Report"]
+        ];
+        for (const [aliases, icon, title] of entries) {
+          if (aliases.some((alias) => key.includes(alias)))
+            return { icon, title };
+        }
+        return { icon: "\u2728", title: "Studio Output" };
+      };
       for (const item of items) {
         const button = list.createEl("button", { cls: "notebooklm-studio-item" });
-        const typeText = this.sanitizeNotebookLMText(String(item.type || "Studio output")).replace(/\n/g, " ").trim();
-        const titleText = this.sanitizeNotebookLMText(String(item.title || "")).replace(/\n/g, " ").trim();
-        const normalizedType = typeText.toLowerCase().replace(/[^a-z0-9]+/g, "");
-        const normalizedTitle = titleText.toLowerCase().replace(/[^a-z0-9]+/g, "");
-        button.createDiv({ cls: "notebooklm-studio-type", text: typeText });
-        if (titleText && normalizedTitle !== normalizedType) {
-          button.createDiv({ cls: "notebooklm-studio-title", text: titleText });
-        }
+        const display = studioDisplay(item.type);
+        button.createDiv({ cls: "notebooklm-studio-icon", text: display.icon });
+        button.createDiv({ cls: "notebooklm-studio-title", text: display.title });
         button.onclick = async () => {
           modal.close();
           const current = await this.app.vault.read(targetFile);

@@ -997,16 +997,34 @@ export default class StarNotebookLMPlugin extends Plugin {
 			modal.contentEl.empty();
 			modal.contentEl.createEl('p', { cls: 'notebooklm-save-subtitle', text: 'Select an item to append to the current Obsidian note.' });
 			const list = modal.contentEl.createDiv({ cls: 'notebooklm-studio-list' });
+			const studioDisplay = (rawType: unknown) => {
+				const key = String(rawType || '').toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+				const entries: Array<[string[], string, string]> = [
+					[['audio overview', 'audio übersicht', '오디오'], '🎧', 'Audio Overview'],
+					[['video overview', 'video übersicht', '비디오'], '🎬', 'Video Overview'],
+					[['mind map', 'mindmap', '마인드맵'], '🧠', 'Mind Map'],
+					[['slide deck'], '🖥️', 'Slide Deck'],
+					[['infographic'], '📊', 'Infographic'],
+					[['data table'], '▦', 'Data Table'],
+					[['flashcard', 'flashcards', '플래시카드'], '🗂️', 'Flashcards'],
+					[['quiz', '퀴즈'], '✓', 'Quiz'],
+					[['study guide', 'lernleitfaden', '학습 가이드'], '📚', 'Study Guide'],
+					[['briefing doc'], '📝', 'Briefing Doc'],
+					[['faq'], '❓', 'FAQ'],
+					[['timeline'], '🕒', 'Timeline'],
+					[['report', 'bericht', '보고서'], '📄', 'Report']
+				];
+				for (const [aliases, icon, title] of entries) {
+					if (aliases.some(alias => key.includes(alias))) return { icon, title };
+				}
+				return { icon: '✨', title: 'Studio Output' };
+			};
+
 			for (const item of items) {
 				const button = list.createEl('button', { cls: 'notebooklm-studio-item' });
-				const typeText = this.sanitizeNotebookLMText(String(item.type || 'Studio output')).replace(/\n/g, ' ').trim();
-				const titleText = this.sanitizeNotebookLMText(String(item.title || '')).replace(/\n/g, ' ').trim();
-				const normalizedType = typeText.toLowerCase().replace(/[^a-z0-9]+/g, '');
-				const normalizedTitle = titleText.toLowerCase().replace(/[^a-z0-9]+/g, '');
-				button.createDiv({ cls: 'notebooklm-studio-type', text: typeText });
-				if (titleText && normalizedTitle !== normalizedType) {
-					button.createDiv({ cls: 'notebooklm-studio-title', text: titleText });
-				}
+				const display = studioDisplay(item.type);
+				button.createDiv({ cls: 'notebooklm-studio-icon', text: display.icon });
+				button.createDiv({ cls: 'notebooklm-studio-title', text: display.title });
 				button.onclick = async () => {
 					modal.close();
 					const current = await this.app.vault.read(targetFile);

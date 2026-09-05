@@ -216,11 +216,13 @@
 .notebooklm-save-option:hover .notebooklm-save-option-arrow { transform: translateX(2px); color: var(--interactive-accent); }
 .notebooklm-studio-list { display: flex; flex-direction: column; gap: 8px; max-height: 430px; overflow-y: auto; padding-right: 3px; }
 .notebooklm-studio-item {
-    width: 100%; min-height: 48px; padding: 10px 13px; text-align: left; border: 1px solid var(--background-modifier-border);
+    width: 100%; min-height: 52px; padding: 10px 14px; text-align: left; border: 1px solid var(--background-modifier-border);
     border-radius: 10px; background: var(--background-secondary); color: var(--text-normal); cursor: pointer; box-shadow: none;
-    display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: center !important;
-    gap: 3px; line-height: 1.25;
+    display: grid !important; grid-template-columns: 34px 1fr; align-items: center !important; gap: 10px; line-height: 1.25;
 }
 .notebooklm-studio-item:hover { border-color: var(--interactive-accent); background: var(--background-modifier-hover); }
-.notebooklm-studio-type { margin: 0; color: var(--interactive-accent); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-.notebooklm-studio-title { overflow: hidden; color: var(--text-normal); font-size: 13px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.notebooklm-studio-icon {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; background: var(--background-primary); font-size: 17px; line-height: 1;
+}
+.notebooklm-studio-title { overflow: hidden; color: var(--text-normal); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
