@@ -1,10 +1,10 @@
 {
-  "id": "star-notebooklm",
-  "name": "Star NotebookLM",
-  "version": "1.2.4",
+  "id": "star-notebooklm-zotero",
+  "name": "Star NotebookLM Zotero",
+  "version": "1.2.4-zotero.1",
   "minAppVersion": "1.0.0",
-  "description": "Send notes directly to Google NotebookLM as sources from an embedded NotebookLM view.",
-  "author": "starhunter",
-  "authorUrl": "https://github.com/starhunter",
+  "description": "Star NotebookLM fork with direct Zotero PDF upload from Obsidian paper notes.",
+  "author": "starhunter / quannguyen83",
+  "authorUrl": "https://github.com/quannguyen83/star-notebooklm",
   "isDesktopOnly": true
 }
