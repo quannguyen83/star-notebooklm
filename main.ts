@@ -1185,66 +1185,25 @@ export default class StarNotebookLMPlugin extends Plugin {
 						addNote(item[0], title, content, item[2] === 2 ? 'generated' : 'note');
 					}
 
-					// NotebookLM also renders generated reports/text as rows below the Studio tiles.
-					// They can live inside the Studio container, so discover row-like items by structure/text
-					// instead of excluding everything under [class*="studio"].
-					function cleanDomText(el, keepLines = false) {
+					// Chat requests can create report-like text artifacts that are not listed as Studio outputs.
+					// Detect those separately and merge them into the Notes category.
+					function cleanDomText(el) {
 						if (!el) return '';
 						const clone = el.cloneNode(true);
 						for (const icon of Array.from(clone.querySelectorAll('mat-icon,.mat-icon,.material-icons,.material-symbols-outlined,.material-symbols-rounded,[class*="material-symbol"],[aria-hidden="true"]'))) icon.remove();
-						let text = String(clone.innerText || clone.textContent || '')
-							.replace(/\\b(?:more_vert|more_horiz|chevron_forward|chevron_right|open_in_new)\\b/gi, ' ');
-						if (keepLines) return text.split(/\\n+/).map(v => v.replace(/\\s+/g, ' ').trim()).filter(Boolean).join('\\n');
-						return text.replace(/\\s+/g, ' ').trim();
+						return String(clone.innerText || clone.textContent || '').replace(/\\s+/g, ' ').trim();
 					}
-					const tileNames = ['audio overview','slide deck','video overview','mind map','reports','flashcards','quiz','infographic','data table'];
-					function isStudioTile(text) {
-						const key = String(text || '').toLowerCase().replace(/beta/g, '').replace(/\\s+/g, ' ').trim();
-						return tileNames.some(name => key === name || (key.length < 45 && key.includes(name)));
-					}
-					function looksLikeGeneratedRow(el, text) {
-						if (!text || text.length < 4 || text.length > 30000 || isStudioTile(text)) return false;
-						const lower = text.toLowerCase();
-						const hasMeta = /(?:\\b\\d+\\s*(?:m|min|mins|h|hr|hrs|d|day|days|hour|hours)\\s*ago\\b|\\b\\d+\\s*(?:phút|giờ|ngày)\\s*trước\\b|\\b\\d+\\s*(?:minuten?|stunden?|tage?)\\b|\\b\\d+\\s*(?:source|sources|nguồn|quelle|quellen)\\b|báo cáo khoa học|scientific report|report)/i.test(lower);
-						const hasMenu = !!el.querySelector('button[aria-label*="more" i],button[title*="more" i],[aria-label*="menu" i],[title*="menu" i],mat-icon');
-						const hasTitle = !!el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="heading"]');
-						return hasMeta || (hasMenu && hasTitle);
-					}
-					function generatedTitle(el, text) {
-						const heading = cleanDomText(el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="heading"]'));
-						if (heading && heading.length <= 180 && !isStudioTile(heading)) return heading;
-						const lines = cleanDomText(el, true).split('\\n').map(v => v.trim()).filter(Boolean);
-						const meta = /(?:ago|trước|source|sources|nguồn|quelle|quellen|báo cáo khoa học|scientific report|\\b\\d+\\s*(?:m|min|h|hr|d|day|giờ|phút|ngày)\\b)/i;
-						return lines.find(v => v.length >= 3 && v.length <= 180 && !meta.test(v) && !isStudioTile(v)) || 'Generated from chat';
-					}
+					const artifactSelectors = ['[class*="artifact"]','[data-testid*="artifact"]','[class*="generated"]','[data-testid*="generated"]','[class*="report-card"]','[data-testid*="report"]'];
 					let domIndex = 0;
 					try {
-						const candidates = new Set();
-						const selectors = [
-							'[class*="artifact"]','[data-testid*="artifact"]','[class*="generated"]','[data-testid*="generated"]',
-							'[class*="report"]','[data-testid*="report"]','[class*="note"]','[data-testid*="note"]',
-							'mat-card','[role="listitem"]','[role="button"]'
-						];
-						for (const selector of selectors) for (const el of Array.from(document.querySelectorAll(selector))) candidates.add(el);
-						// The generated rows in the current NotebookLM UI have a per-row overflow menu.
-						for (const menu of Array.from(document.querySelectorAll('button,mat-icon'))) {
-							const label = ((menu.getAttribute && (menu.getAttribute('aria-label') || menu.getAttribute('title'))) || '') + ' ' + (menu.textContent || '');
-							if (!/(?:more_vert|more_horiz|more|menu)/i.test(label)) continue;
-							let row = menu.parentElement;
-							for (let depth = 0; row && depth < 5; depth++, row = row.parentElement) {
-								const text = cleanDomText(row);
-								if (text.length >= 4 && text.length <= 1500) candidates.add(row);
+						for (const selector of artifactSelectors) {
+							for (const el of Array.from(document.querySelectorAll(selector))) {
+								if (el.closest('[class*="studio"],[data-testid*="studio"]')) continue;
+								const content = cleanDomText(el);
+								if (content.length < 60 || content.length > 30000) continue;
+								const heading = cleanDomText(el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="heading"]'));
+								addNote('generated-dom-' + (++domIndex), heading || 'Generated from chat', content, 'generated');
 							}
-						}
-						const seenDomTitles = new Set();
-						for (const el of candidates) {
-							const text = cleanDomText(el);
-							if (!looksLikeGeneratedRow(el, text)) continue;
-							const title = generatedTitle(el, text);
-							const titleKey = normalizeKey(title);
-							if (seenDomTitles.has(titleKey)) continue;
-							seenDomTitles.add(titleKey);
-							addNote('generated-dom-' + (++domIndex), title, text, 'generated');
 						}
 					} catch (_) {
 						// Generated-text discovery is optional; normal NotebookLM notes must still load.
