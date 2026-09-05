@@ -754,6 +754,41 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       }
     }
   }
+  wireModalKeyboardNavigation(modal, buttons, onBack) {
+    const available = () => buttons.filter((button) => button.isConnected && !button.disabled);
+    setTimeout(() => {
+      var _a;
+      return (_a = available()[0]) == null ? void 0 : _a.focus();
+    }, 0);
+    modal.modalEl.addEventListener("keydown", (event) => {
+      var _a;
+      const items = available();
+      if (!items.length)
+        return;
+      const active = document.activeElement;
+      let index = Math.max(0, items.indexOf(active));
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+        event.preventDefault();
+        items[(index + 1) % items.length].focus();
+      } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        items[(index - 1 + items.length) % items.length].focus();
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        items[0].focus();
+      } else if (event.key === "End") {
+        event.preventDefault();
+        items[items.length - 1].focus();
+      } else if ((event.key === "Escape" || event.key === "Backspace") && onBack) {
+        const tag = (_a = event.target) == null ? void 0 : _a.tagName;
+        if (tag !== "INPUT" && tag !== "TEXTAREA") {
+          event.preventDefault();
+          modal.close();
+          onBack();
+        }
+      }
+    });
+  }
   showNotebookLMSaveOptions() {
     const modal = new import_obsidian.Modal(this.app);
     modal.modalEl.addClass("notebooklm-save-modal");
@@ -764,8 +799,10 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       text: "Choose what you want to bring into the current Obsidian note."
     });
     const options = modal.contentEl.createDiv({ cls: "notebooklm-save-options" });
+    const navButtons = [];
     const createOption = (icon, title, description, action) => {
       const card = options.createEl("button", { cls: "notebooklm-save-option" });
+      navButtons.push(card);
       card.createDiv({ cls: "notebooklm-save-option-icon", text: icon });
       const textWrap = card.createDiv({ cls: "notebooklm-save-option-text" });
       textWrap.createDiv({ cls: "notebooklm-save-option-title", text: title });
@@ -779,13 +816,14 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     createOption("\u{1F4AC}", "Latest chat response", "Save the most recent NotebookLM answer.", async () => {
       await this.saveCurrentNotebookLMResponse();
     });
-    createOption("\u{1F4DD}", "NotebookLM note", "Choose one of the notes created inside this notebook.", async () => {
+    createOption("\u{1F4DD}", "Notes & generated text", "Notes plus reports and other text artifacts created from chat.", async () => {
       await this.saveNotebookLMNoteToObsidian();
     });
     createOption("\u2728", "Studio output", "Import reports, study guides, mind maps, audio/video and other Studio outputs.", async () => {
       await this.saveNotebookLMStudioOutputToObsidian();
     });
     modal.open();
+    this.wireModalKeyboardNavigation(modal, navButtons);
   }
   async saveNotebookLMStudioOutputToObsidian() {
     const markdownView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
@@ -882,6 +920,13 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       modal.modalEl.addClass("notebooklm-save-modal");
       modal.titleEl.setText("Choose Studio output");
       modal.contentEl.empty();
+      const navButtons = [];
+      const backButton = modal.contentEl.createEl("button", { cls: "notebooklm-back-button", text: "\u2190 Back" });
+      navButtons.push(backButton);
+      backButton.onclick = () => {
+        modal.close();
+        this.showNotebookLMSaveOptions();
+      };
       modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "Select an item to append to the current Obsidian note." });
       const list = modal.contentEl.createDiv({ cls: "notebooklm-studio-list" });
       const studioDisplay = (rawType) => {
@@ -909,6 +954,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       };
       for (const item of items) {
         const button = list.createEl("button", { cls: "notebooklm-studio-item" });
+        navButtons.push(button);
         const display = studioDisplay(item.type);
         button.createDiv({ cls: "notebooklm-studio-icon", text: display.icon });
         button.createDiv({ cls: "notebooklm-studio-title", text: display.title });
@@ -930,6 +976,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         };
       }
       modal.open();
+      this.wireModalKeyboardNavigation(modal, navButtons, () => this.showNotebookLMSaveOptions());
     } catch (error) {
       console.error("[Star NotebookLM] Studio output save failed:", error);
       new import_obsidian.Notice(`Studio output save failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -991,9 +1038,26 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 					if (!data || !Array.isArray(data) || !Array.isArray(data[0])) return { notebookId, notes: [] };
 
 					const notes = [];
+					const seenNotes = new Set();
+					function normalizeKey(text) {
+						return String(text || '').toLowerCase().replace(/s+/g, ' ').trim().slice(0, 500);
+					}
+					function addNote(id, title, content, kind) {
+						content = String(content || '').trim();
+						if (!content || content.includes('"children":') || content.includes('"nodes":')) return;
+						const key = normalizeKey(content);
+						if (!key || seenNotes.has(key)) return;
+						seenNotes.add(key);
+						notes.push({ id, title: String(title || '').trim() || (kind === 'generated' ? 'Generated from chat' : 'Untitled Note'), content, kind });
+					}
+					function collectStrings(node, out, depth = 0) {
+						if (depth > 8 || node == null) return;
+						if (typeof node === 'string') { if (node.trim()) out.push(node.trim()); return; }
+						if (Array.isArray(node)) for (const child of node) collectStrings(child, out, depth + 1);
+						else if (typeof node === 'object') for (const child of Object.values(node)) collectStrings(child, out, depth + 1);
+					}
 					for (const item of data[0]) {
 						if (!Array.isArray(item) || !item.length || typeof item[0] !== 'string') continue;
-						if (item[1] === null && item[2] === 2) continue;
 						let content = '', title = '';
 						if (typeof item[1] === 'string') content = item[1];
 						else if (Array.isArray(item[1])) {
@@ -1001,9 +1065,36 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 							if (typeof inner[1] === 'string') content = inner[1];
 							if (typeof inner[4] === 'string') title = inner[4];
 						}
-						if (!content) continue;
-						if (content.includes('"children":') || content.includes('"nodes":')) continue;
-						notes.push({ id: item[0], title: title || 'Untitled Note', content });
+						if (!content) {
+							const strings = [];
+							collectStrings(item.slice(1), strings);
+							const unique = Array.from(new Set(strings)).filter(v => v && v !== item[0]);
+							const candidates = unique.filter(v => v.length >= 40 && v.length <= 30000 && !/^https?:///i.test(v));
+							candidates.sort((a, b) => b.length - a.length);
+							content = candidates[0] || '';
+							if (!title) title = unique.find(v => v !== content && v.length >= 3 && v.length <= 140 && !/^[0-9a-f-]{20,}$/i.test(v)) || '';
+						}
+						addNote(item[0], title, content, item[2] === 2 ? 'generated' : 'note');
+					}
+
+					// Chat requests can create report-like text artifacts that are not listed as Studio outputs.
+					// Detect those separately and merge them into the Notes category.
+					function cleanDomText(el) {
+						if (!el) return '';
+						const clone = el.cloneNode(true);
+						for (const icon of Array.from(clone.querySelectorAll('mat-icon,.mat-icon,.material-icons,.material-symbols-outlined,.material-symbols-rounded,[class*="material-symbol"],[aria-hidden="true"]'))) icon.remove();
+						return String(clone.innerText || clone.textContent || '').replace(/s+/g, ' ').trim();
+					}
+					const artifactSelectors = ['[class*="artifact"]','[data-testid*="artifact"]','[class*="generated"]','[data-testid*="generated"]','[class*="report-card"]','[data-testid*="report"]'];
+					let domIndex = 0;
+					for (const selector of artifactSelectors) {
+						for (const el of Array.from(document.querySelectorAll(selector))) {
+							if (el.closest('[class*="studio"],[data-testid*="studio"]')) continue;
+							const content = cleanDomText(el);
+							if (content.length < 60 || content.length > 30000) continue;
+							const heading = cleanDomText(el.querySelector('h1,h2,h3,h4,[class*="title"],[class*="heading"]'));
+							addNote('generated-dom-' + (++domIndex), heading || 'Generated from chat', content, 'generated');
+						}
 					}
 					return { notebookId, notes };
 				})()
@@ -1018,17 +1109,31 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         return;
       }
       const modal = new import_obsidian.Modal(this.app);
-      modal.titleEl.setText("Choose NotebookLM note");
+      modal.modalEl.addClass("notebooklm-save-modal");
+      modal.titleEl.setText("Choose note or generated text");
       modal.contentEl.empty();
+      const navButtons = [];
+      const backButton = modal.contentEl.createEl("button", { cls: "notebooklm-back-button", text: "\u2190 Back" });
+      navButtons.push(backButton);
+      backButton.onclick = () => {
+        modal.close();
+        this.showNotebookLMSaveOptions();
+      };
+      modal.contentEl.createEl("p", { cls: "notebooklm-save-subtitle", text: "NotebookLM notes and report-like text generated from chat are collected here." });
+      const list = modal.contentEl.createDiv({ cls: "notebooklm-note-list" });
       for (const note of notes) {
-        const button = modal.contentEl.createEl("button", { text: String(note.title || "Untitled Note") });
-        button.style.width = "100%";
-        button.style.marginBottom = "8px";
+        const button = list.createEl("button", { cls: "notebooklm-note-item" });
+        navButtons.push(button);
+        const generated = note.kind === "generated";
+        button.createDiv({ cls: "notebooklm-note-icon", text: generated ? "\u{1F4C4}" : "\u{1F4DD}" });
+        const text = button.createDiv({ cls: "notebooklm-note-text" });
+        text.createDiv({ cls: "notebooklm-note-title", text: String(note.title || (generated ? "Generated from chat" : "Untitled Note")) });
+        text.createDiv({ cls: "notebooklm-note-kind", text: generated ? "Generated from chat" : "NotebookLM note" });
         button.onclick = async () => {
           modal.close();
           const current = await this.app.vault.read(targetFile);
           const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
-          const title = String(note.title || "Untitled Note").replace(/\n/g, " ");
+          const title = String(note.title || (generated ? "Generated from chat" : "Untitled Note")).replace(/\n/g, " ");
           const block = `
 
 ## NotebookLM Notes
@@ -1040,10 +1145,11 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 ${this.sanitizeNotebookLMText(String(note.content || ""))}
 `;
           await this.app.vault.modify(targetFile, current + block);
-          new import_obsidian.Notice(`\u2705 NotebookLM note saved to ${targetFile.basename}.`);
+          new import_obsidian.Notice(`\u2705 NotebookLM text saved to ${targetFile.basename}.`);
         };
       }
       modal.open();
+      this.wireModalKeyboardNavigation(modal, navButtons, () => this.showNotebookLMSaveOptions());
     } catch (error) {
       console.error("[Star NotebookLM] NotebookLM note import failed:", error);
       new import_obsidian.Notice(`NotebookLM note import failed: ${error instanceof Error ? error.message : String(error)}`);
