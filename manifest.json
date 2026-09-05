@@ -1,7 +1,7 @@
 {
   "id": "star-notebooklm-zotero",
   "name": "Star NotebookLM Zotero",
-  "version": "1.2.4-zotero.16",
+  "version": "1.2.4-zotero.17",
   "minAppVersion": "1.0.0",
   "description": "Star NotebookLM fork with direct Zotero PDF upload from Obsidian paper notes.",
   "author": "starhunter / quannguyen83",
