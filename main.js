@@ -314,6 +314,13 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       }
     });
     this.addCommand({
+      id: "save-notebooklm-response-to-obsidian",
+      name: "Save current NotebookLM response to Obsidian",
+      callback: async () => {
+        await this.saveCurrentNotebookLMResponse();
+      }
+    });
+    this.addCommand({
       id: "open-notebooklm",
       name: t("cmd.open"),
       callback: async () => {
@@ -745,6 +752,69 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
         await view.webview.executeJavaScript("window.__obsidianZoteroPdfChunks = [];");
       } catch (_) {
       }
+    }
+  }
+  async saveCurrentNotebookLMResponse() {
+    const markdownView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+    const targetFile = markdownView == null ? void 0 : markdownView.file;
+    if (!targetFile) {
+      new import_obsidian.Notice("Open the Obsidian note you want to save into first.");
+      return;
+    }
+    const view = await this.getNotebookLMView();
+    if (!(view == null ? void 0 : view.webview)) {
+      new import_obsidian.Notice("NotebookLM panel is not available.");
+      return;
+    }
+    try {
+      const responseText = await view.webview.executeJavaScript(`
+				(function() {
+					const selected = window.getSelection ? String(window.getSelection()).trim() : '';
+					if (selected.length > 20) return selected;
+					const selectors = ['[data-message-author-role="assistant"]','.assistant-message','.response-content','.answer-content','.message-content'];
+					for (const selector of selectors) {
+						const nodes = Array.from(document.querySelectorAll(selector));
+						for (let i = nodes.length - 1; i >= 0; i--) {
+							const text = (nodes[i].innerText || nodes[i].textContent || '').trim();
+							if (text.length > 20) return text;
+						}
+					}
+					const buttons = Array.from(document.querySelectorAll('button'));
+					const copies = buttons.filter((button) => {
+						const label = ((button.getAttribute('aria-label') || '') + ' ' + (button.getAttribute('title') || '') + ' ' + (button.textContent || '')).toLowerCase();
+						return label.includes('copy') || label.includes('kopieren') || label.includes('\uBCF5\uC0AC');
+					});
+					if (copies.length) {
+						let node = copies[copies.length - 1].parentElement;
+						let best = '';
+						for (let depth = 0; node && depth < 8; depth++, node = node.parentElement) {
+							const text = (node.innerText || '').trim();
+							if (text.length > best.length && text.length < 12000) best = text;
+						}
+						if (best.length > 20) return best;
+					}
+					return '';
+				})();
+			`);
+      if (!responseText || String(responseText).trim().length < 20) {
+        new import_obsidian.Notice("Could not find a NotebookLM response. Select the response text in NotebookLM and run the command again.");
+        return;
+      }
+      const current = await this.app.vault.read(targetFile);
+      const stamp = (/* @__PURE__ */ new Date()).toLocaleString();
+      const block = `
+
+## NotebookLM Notes
+
+### ${stamp}
+
+${String(responseText).trim()}
+`;
+      await this.app.vault.modify(targetFile, current + block);
+      new import_obsidian.Notice(`\u2705 NotebookLM response saved to ${targetFile.basename}.`);
+    } catch (error) {
+      console.error("[Star NotebookLM] NotebookLM to Obsidian save failed:", error);
+      new import_obsidian.Notice(`NotebookLM save failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   async sendCurrentNoteToQueue() {
