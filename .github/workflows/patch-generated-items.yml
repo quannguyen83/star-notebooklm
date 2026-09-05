@@ -1,0 +1,30 @@
+name: Patch generated NotebookLM items
+on:
+  push:
+    branches: [fix-note-loader-temp]
+    paths:
+      - '.github/scripts/patch-generated-items.cjs'
+      - '.github/workflows/patch-generated-items.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Patch
+        run: node .github/scripts/patch-generated-items.cjs
+      - name: Build
+        run: npm ci && npm run build
+      - name: Commit implementation
+        run: |
+          rm -f .github/scripts/patch-generated-items.cjs .github/workflows/patch-generated-items.yml .github/scripts/fix-note-loader.cjs .github/workflows/fix-note-loader.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add main.ts main.js manifest.json .github
+          git commit -m 'fix: detect generated NotebookLM rows below Studio tiles'
+          git push origin HEAD:fix-note-loader-temp
