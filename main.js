@@ -308,7 +308,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
     });
     this.addCommand({
       id: "send-zotero-pdf-to-notebooklm",
-      name: "Send Zotero PDF to NotebookLM",
+      name: "Send Zotero PDF to NotebookLM (API v2)",
       callback: async () => {
         await this.sendCurrentZoteroPdf();
       }
@@ -499,7 +499,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
 						})();
 					`);
         }
-        setTimeout(() => this.uploadPdfViaDOM(view, pdfPath), 3e3);
+        setTimeout(() => this.uploadPdfViaAPI(view, pdfPath), 3e3);
       }
     );
     modal.open();
@@ -574,7 +574,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       return false;
     }
   }
-  async uploadPdfViaDOM(view, pdfPath) {
+  async uploadPdfViaAPI(view, pdfPath) {
     if (!view.webview)
       return;
     try {
@@ -582,7 +582,7 @@ var StarNotebookLMPlugin = class extends import_obsidian.Plugin {
       const data = await fs.promises.readFile(pdfPath);
       const base64 = data.toString("base64");
       const fileSize = data.length;
-      new import_obsidian.Notice(`Uploading ${filename} to NotebookLM...`);
+      new import_obsidian.Notice(`API v2: Uploading ${filename} to NotebookLM...`);
       const pageInfo = await view.webview.executeJavaScript(`
 				(function() {
 					const match = window.location.pathname.match(/\\/notebook\\/([^/]+)/);

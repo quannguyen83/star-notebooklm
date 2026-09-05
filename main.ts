@@ -340,7 +340,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'send-zotero-pdf-to-notebooklm',
-			name: 'Send Zotero PDF to NotebookLM',
+			name: 'Send Zotero PDF to NotebookLM (API v2)',
 			callback: async () => {
 				await this.sendCurrentZoteroPdf();
 			}
@@ -583,7 +583,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 					`);
 				}
 
-				setTimeout(() => this.uploadPdfViaDOM(view, pdfPath), 3000);
+				setTimeout(() => this.uploadPdfViaAPI(view, pdfPath), 3000);
 			}
 		);
 		modal.open();
@@ -667,7 +667,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 	}
 
 
-	async uploadPdfViaDOM(view: NotebookLMView, pdfPath: string) {
+	async uploadPdfViaAPI(view: NotebookLMView, pdfPath: string) {
 		if (!view.webview) return;
 
 		try {
@@ -675,7 +675,7 @@ export default class StarNotebookLMPlugin extends Plugin {
 			const data = await fs.promises.readFile(pdfPath);
 			const base64 = data.toString('base64');
 			const fileSize = data.length;
-			new Notice(`Uploading ${filename} to NotebookLM...`);
+			new Notice(`API v2: Uploading ${filename} to NotebookLM...`);
 
 			const pageInfo = await view.webview.executeJavaScript(`
 				(function() {
