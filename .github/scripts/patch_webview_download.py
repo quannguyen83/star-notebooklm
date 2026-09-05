@@ -63,7 +63,7 @@ repl = r'''	private async downloadNotebookLMArtifact(url: string, title: string,
 		try {
 			const data: Uint8Array = fs.readFileSync(tempPath);
 			if (!data?.byteLength) throw new Error('NotebookLM downloaded an empty file.');
-			const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+			const arrayBuffer: ArrayBuffer = Uint8Array.from(data).buffer;
 			const existing = this.app.vault.getAbstractFileByPath(vaultPath);
 			if (existing instanceof TFile) await this.app.vault.modifyBinary(existing, arrayBuffer);
 			else await this.app.vault.createBinary(vaultPath, arrayBuffer);
