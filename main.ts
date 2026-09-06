@@ -985,19 +985,37 @@ export default class StarNotebookLMPlugin extends Plugin {
 		return 'bin';
 	}
 
+	private findExistingNotebookLMArtifactFile(artifactId: string): TFile | null {
+		const idPart = String(artifactId || '').slice(0, 10);
+		if (!idPart) return null;
+		for (const file of this.app.vault.getFiles()) {
+			if (file.path.startsWith('NotebookLM Imports/assets/') && file.basename.endsWith(`--${idPart}`)) {
+				return file;
+			}
+		}
+		return null;
+	}
+
 	private async downloadNotebookLMArtifact(url: string, title: string, type: string, artifactId: string, forcedExt?: string): Promise<TFile> {
 		if (!url) throw new Error('Artifact download URL is missing.');
-		const view = this.getNotebookLMView();
-		const webview: any = view?.webview;
-		if (!webview || typeof webview.downloadURL !== 'function') {
-			throw new Error('NotebookLM webview download API is not available.');
-		}
 
 		await this.ensureNotebookLMFolder('NotebookLM Imports/assets');
 		const ext = forcedExt || this.notebookLMAssetExtension(type, url);
 		const safeTitle = this.notebookLMSafeName(title);
 		const idPart = String(artifactId || 'artifact').slice(0, 10);
 		const vaultPath = `NotebookLM Imports/assets/${safeTitle}--${idPart}.${ext}`;
+
+		const existingArtifact = this.findExistingNotebookLMArtifactFile(artifactId);
+		if (existingArtifact) {
+			new Notice(`Already downloaded: ${existingArtifact.name}`);
+			return existingArtifact;
+		}
+
+		const view = this.getNotebookLMView();
+		const webview: any = view?.webview;
+		if (!webview || typeof webview.downloadURL !== 'function') {
+			throw new Error('NotebookLM webview download API is not available.');
+		}
 
 		const electron = (window as any).require?.('electron');
 		const remote = electron?.remote;
